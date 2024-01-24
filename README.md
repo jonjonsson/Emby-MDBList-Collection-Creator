@@ -14,7 +14,8 @@ See comments in *config.cfg* for further info.
 
 ## There are 2 ways to create collections from lists on MDBList
 
-### Manually specifying list IDs
+### Add list MDBList IDs to config.cfg
+* See *config.cfg* for examples.
 * Use this to create collections from other people's lists. You will find these lists at https://mdblist.com/toplists/
 * There are a couple of examples in *config.cfg*. Use that to add more lists. You'll see the following parameters:
 * * "Id" - Specify the ID of the MDBList you want to use. You can find this ID by viewing the source of the MDBList page and look for "?list="
@@ -22,7 +23,7 @@ See comments in *config.cfg* for further info.
 * *  "Source" is optional and just for your own record.
 
 ### Automatically download your created lists on MDBList
-You can create your own lists on MDBList, see https://mdblist.com/mylists/. Emby collections will be created from your lists unless you specify not to in config.cfg. Wait for your newly created MDBLists lists to populate items before running the script.
+You can create your own lists on MDBList, see https://mdblist.com/mylists/. Emby collections will be automatically created from your saved lists on MDBList. You can turn this off in config.cfg. Wait for your newly created MDBLists lists to populate items before running the script.
 
 ## FAQ
 * What happens if I rename my collection in Emby or this script
