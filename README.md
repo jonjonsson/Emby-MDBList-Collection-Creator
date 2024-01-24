@@ -1,42 +1,66 @@
-
 # Emby MDBList Collection Creator
-A Python script can take MDBList.com lists and create collections from them in Emby. MDBList stores Trakt and IMDB lists (and more) that can be accessed via API.
 
-## Requirements:
-* "requests" Python package. Install with "pip install requests"
-* Admin user on Emby
-* A user on https://mdblist.com/
+This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API.
 
-## Fill in the admin section in config.cfg.
+## Prerequisites:
 
-You'll need the Emby server URL, Emby user ID, Emby API key and an MDBList API key.
-See comments in *config.cfg* for further info.
+To use this script, you need:
 
-## There are 2 ways to create collections from lists on MDBList
+* Python installed on your system
+* "Requests" Python package (install with `pip install requests`)
+* Admin privileges on Emby
+* A user account on [MDBList](https://mdblist.com/)
+* The script has been tested with Emby Version 4.7.14.0, but other recent versions should also be compatible
 
-### Add list MDBList IDs to config.cfg
-* See *config.cfg* for examples.
-* Use this to create collections from other people's lists. You will find these lists at https://mdblist.com/toplists/
-* There are a couple of examples in *config.cfg*. Use that to add more lists. You'll see the following parameters:
-* * "Id" - Specify the ID of the MDBList you want to use. You can find this ID by viewing the source of the MDBList page and look for "?list="
-* * "Frequency" is how often the collection is updated. 100 = 100% of the time. 50 = 50% etc. It will always run the first time.
-* *  "Source" is optional and just for your own record.
+## Usage
 
-### Automatically download your created lists on MDBList
-You can create your own lists on MDBList, see https://mdblist.com/mylists/. Emby collections will be automatically created from your saved lists on MDBList. You can turn this off in config.cfg. Wait for your newly created MDBLists lists to populate items before running the script.
+### Configuring the Admin Section
 
-## FAQ
-* What happens if I rename my collection in Emby or this script
-* * Another collection will be created with whatever name you specify in config.cfg
-* Does this affect my collection that I have created manually?
-* * Only if they have the same name as you specify in config.cfg
-* Do I need a server to use this script?
-* * No, you can just run it on your PC and keep it open. It refreshes the collections every n hour.
-* Do the collections show for all Emby users?
-* * Yes.
+In the `config.cfg` file, fill in the following details:
 
-## Helpful URLS for dev:
-* https://swagger.emby.media/?staticview=true#/
-* https://github.com/MediaBrowser/Emby/wiki
-* https://dev.emby.media/doc/restapi/Browsing-the-Library.html
-* https://dev.emby.media/home/sdk/apiclients/Python/README.html
+* Emby server URL
+* Emby admin user ID
+* Emby API key
+* MDBList API key
+
+Refer to the comments in `config.cfg` for additional information.
+
+### Running the Script
+
+Navigate to the project directory and execute the following commands:
+
+```bash
+pip install requests
+python app.py
+```
+
+## Creating Emby Collections from MDBList Lists
+
+There are two methods to create Emby collections from MDBList lists:
+
+### 1. Add MDBList IDs to `config.cfg`
+
+* Refer to `config.cfg` for examples.
+* This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/).
+* The `config.cfg` file contains a few examples. Use these as a guide to add more lists. The parameters you'll encounter are:
+  * "Id" - The ID of the MDBList you want to use. This can be found by viewing the source of the MDBList page and looking for "?list="
+  * "Frequency" - The frequency at which the collection is updated. 100 = 100% of the time, 50 = 50% of the time, etc. The collections will always be created if they do not previously exist.
+  * "Source" - This field is optional and is for your own records.
+
+### 2. Automatically Download Your Lists from MDBList
+
+By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com/mylists/)), Emby collections will be automatically created from your saved lists. This feature can be turned off in `config.cfg`. Please ensure your newly created MDBLists populate items before running the script.
+
+## Frequently Asked Questions
+
+- **What happens if I rename my collection in Emby or this script?**
+  - A new collection will be created with the name you specify in `config.cfg`.
+  
+- **Does this affect my manually created collection?**
+  - This will only affect collections with the same name as specified in `config.cfg`.
+  
+- **Do I need a server to use this script?**
+  - No, you can run it on your PC and keep it open. The script refreshes the collections every n hours.
+  
+- **Do the collections show for all Emby users?**
+  - Yes, the collections will be visible to all Emby users.

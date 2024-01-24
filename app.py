@@ -3,6 +3,12 @@ import time
 import requests  # pip install requests
 import configparser
 
+## Helpful URLS for dev:
+# https://swagger.emby.media/?staticview=true#/
+# https://github.com/MediaBrowser/Emby/wiki
+# https://dev.emby.media/doc/restapi/Browsing-the-Library.html
+# https://dev.emby.media/home/sdk/apiclients/Python/README.html
+
 config_parser = configparser.ConfigParser()
 
 # Check if config_hidden.cfg exists, if so, use that, otherwise use config.cfg
@@ -406,8 +412,9 @@ def main():
         if download_my_mdblist_lists_automatically:
             process_my_lists_on_mdblist()
 
+        print()
         print(
-            f"In total added {newly_added} to collections and removed {newly_removed} items."
+            f"SUMMARY: Added {newly_added} items in total to collections and removed {newly_removed} items."
         )
         print(
             f"Waiting {hours_between_refresh} hours for next refresh. Iteration {iterations}"
