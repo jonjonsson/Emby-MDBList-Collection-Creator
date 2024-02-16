@@ -7,7 +7,7 @@ import configparser
 # https://swagger.emby.media/?staticview=true#/
 # https://github.com/MediaBrowser/Emby/wiki
 # https://dev.emby.media/doc/restapi/Browsing-the-Library.html
-# https://dev.emby.media/home/sdk/apiclients/Python/README.html
+# https://docs.mdblist.com/docs/api
 
 config_parser = configparser.ConfigParser()
 
@@ -39,10 +39,12 @@ for section in config_parser.sections():
     try:
         mdblist_lists.append(
             {
-                "Name": section,
-                "Id": config_parser.get(section, "Id"),
+                "Collection_Name": section,
+                "Id": config_parser.get(section, "Id", fallback=None),
                 "Source": config_parser.get(section, "Source", fallback=""),
-                "Frequency": config_parser.get(section, "Frequency"),
+                "Frequency": config_parser.get(section, "Frequency", fallback=100),
+                "List_Name": config_parser.get(section, "List_Name", fallback=None),
+                "User_Name": config_parser.get(section, "User_Name", fallback=None),
             }
         )
     except configparser.NoOptionError as e:
@@ -51,6 +53,12 @@ for section in config_parser.sections():
 emby_api_batch_size = 50  # To prevent too long URLs, queries are done in batches of n
 
 mbdList_my_lists_url = "https://mdblist.com/api/lists/user/?apikey=" + mdblist_api_key
+mbdList_search_lists_url = (
+    "https://mdblist.com/api/lists/search?s={list_name}&apikey=" + mdblist_api_key
+)
+mdblist_get_lists_of_user_url = (
+    "https://mdblist.com/api/lists/user/{id}/?apikey=" + mdblist_api_key
+)
 mdbList_url = "https://mdblist.com/api/lists/{list_id}/items/?apikey=" + mdblist_api_key
 headers = {"X-MediaBrowser-Token": emby_api_key}
 
@@ -202,7 +210,6 @@ def get_collection_id(collection_name):
             break
 
     if collection_found is False:
-        print(f"Collection ID for {collection_name} not found")
         return None
 
     return collection_id
@@ -302,28 +309,50 @@ def find_missing_entries_in_list(list_to_check, list_to_find):
     return [item for item in list_to_find if item not in list_to_check]
 
 
-def process_list(mdblist_list: dict, frequency=100):
-    # Example return
-    # [{"id": 45811, "name": "Trending Movies", "slug": "trending-movies", "items": 20, "likes": null, "dynamic": true, "private": false, "mediatype": "movie", "description": ""}]
-    list_name = mdblist_list["name"]
-    list_id = mdblist_list["id"]
-    collection_id = get_collection_id(list_name)
+def process_list(mdblist_list: dict):
+    collection_name = mdblist_list["Collection_Name"]
+    frequency = int(mdblist_list.get("Frequency", 100))
+    list_id = mdblist_list.get("Id", None)
+    list_name = mdblist_list.get("List_Name", None)
+    user_name = mdblist_list.get("User_Name", None)
+
+    collection_id = get_collection_id(collection_name)
 
     if collection_id is None:
+        print(f"Collection {collection_name} does not exist. Will create it.")
         frequency = 100  # If collection doesn't exist, download every time
 
     print()
     print("=========================================")
 
     if random.randint(0, 100) > frequency:
-        print(f"Skipping mdblist {list_name} since frequency is {frequency}")
+        print(f"Skipping mdblist {collection_name} since frequency is {frequency}")
         print("=========================================")
         return
 
-    mdblist_imdb_ids = get_mdblist_list(list_id)
+    mdblist_imdb_ids = None
+    if list_id is not None:
+        mdblist_imdb_ids = get_mdblist_list(list_id)
+    elif list_name is not None and user_name is not None:
+        found_list_id = find_mdblist_id_by_name_and_user(list_name, user_name)
+        if found_list_id is None:
+            print(
+                f"ERROR! Could not find list {list_name} by user {user_name}. Will not process this list."
+            )
+            print("=========================================")
+            return
+        mdblist_imdb_ids = get_mdblist_list(found_list_id)
+    else:
+        print(
+            f"ERROR! Must provide either list_id or both list_name and user_name for mdblist {collection_name}. Will not process this list."
+        )
+        print("=========================================")
+        return
 
     if mdblist_imdb_ids is None:
-        print(f"ERROR! No items in mdblist {list_name}. Will not process this list.")
+        print(
+            f"ERROR! No items in mdblist {collection_name}. Will not process this list."
+        )
         print("=========================================")
         return
 
@@ -331,12 +360,14 @@ def process_list(mdblist_list: dict, frequency=100):
     missing_imdb_ids = []
 
     if len(mdblist_imdb_ids) == 0:
-        print(f"ERROR! No items in mdblist {list_name}. Will not process this list.")
+        print(
+            f"ERROR! No items in mdblist {collection_name}. Will not process this list."
+        )
         print("=========================================")
         return
 
-    print(f"Processing {list_name}. List has {len(mdblist_imdb_ids)} IMDB IDs.")
-    collection_id = get_collection_id(list_name)
+    print(f"Processing {collection_name}. List has {len(mdblist_imdb_ids)} IMDB IDs.")
+    collection_id = get_collection_id(collection_name)
 
     if collection_id is None:
         missing_imdb_ids = mdblist_imdb_ids
@@ -360,16 +391,18 @@ def process_list(mdblist_list: dict, frequency=100):
 
     if collection_id is None:
         if len(add_emby_ids) == 0:
-            print(f"ERROR! No items to put in mdblist {list_name}. Will not process.")
+            print(
+                f"ERROR! No items to put in mdblist {collection_name}. Will not process."
+            )
             print("=========================================")
             return
         create_collection(
-            list_name, [add_emby_ids[0]]
+            collection_name, [add_emby_ids[0]]
         )  # Create the collection with the first item since you have to create with an item
         add_emby_ids.pop(0)
 
-    add_to_collection(list_name, add_emby_ids)
-    delete_from_collection(list_name, remove_emby_ids)
+    add_to_collection(collection_name, add_emby_ids)
+    delete_from_collection(collection_name, remove_emby_ids)
     print("=========================================")
 
 
@@ -385,12 +418,92 @@ def process_my_lists_on_mdblist():
 
 def process_hardcoded_lists():
     for mdblist_list in mdblist_lists:
-        frequency = 100
-        if "Frequency" in mdblist_list:
-            frequency = int(mdblist_list["Frequency"])
-        process_list(
-            {"name": mdblist_list["Name"], "id": mdblist_list["Id"]}, frequency
+        process_list(mdblist_list)
+
+
+def find_mdblist_id_by_name(list_name):
+    """
+    Lists search
+    Search public lists by title
+
+    GET https://mdblist.com/api/lists/search?s={query}&apikey={api_key}
+    query: List Title to search
+    Response
+
+    [
+        {
+            "id":14,
+            "name":"Top Watched Movies of The Week / >60",
+            "slug":"top-watched-movies-of-the-week",
+            "items":72,
+            "likes":244,
+            "user_id":3,
+            "mediatype":"movie",
+            "user_name":"linaspurinis",
+            "description":"",
+        },
+    ]
+    """
+    list_name = list_name.replace(" ", "%20")
+    url = mbdList_search_lists_url.format(list_name=list_name)
+    response = requests.get(url)
+    mdblist_lists = response.json()
+    return mdblist_lists
+
+
+def filter_mdblist_lists_by_user_name(lists, user_name):
+    return [list for list in lists if list["user_name"].lower() == user_name.lower()]
+
+
+def find_mdblist_id_by_name_and_user(list_name, user_name):
+    lists = find_mdblist_id_by_name(list_name)
+    filtered = filter_mdblist_lists_by_user_name(lists, user_name)
+    if len(filtered) == 0:
+        return None
+    if len(filtered) > 1:
+        print(
+            f"Warning! Found {len(filtered)} lists with name {list_name} by user {user_name}. Will use the first one."
         )
+    return filtered[0]["id"]
+
+
+def find_mdblist_id_by_url(url):
+    # Find list by url, example: https://mdblist.com/lists/betdonkey/best-rottentomatoes-documentaries
+    # where betdonkey is the user_name and best-rottentomatoes-documentaries is the list_name
+    # This is problematic because url is the slug, not the list name and fails often
+    url_parts = url.split("/")
+    user_name = url_parts[-2]
+    list_name = url_parts[-1]
+    list_name = list_name.replace("-", " ")
+    lists = find_mdblist_id_by_name_and_user(list_name, user_name)
+    return lists
+
+
+def get_mdblist_lists_of_user(user_id):
+    """
+    Get User lists
+    Returns list of User Lists
+
+    GET https://mdblist.com/api/lists/user/{id}/
+    id: user id
+    Response
+    [
+        {
+            "id":13,
+            "name":"Top Watched Movies of The Week for KiDS",
+            "slug":"top-watched-movies-of-the-week-for-kids",
+            "items":13,
+            "likes":50,
+            "mediatype":"movie",
+            "description":"",
+        },
+    ]
+
+    """
+    url = mdblist_get_lists_of_user_url.format(id=user_id)
+    response = requests.get(url)
+    mdblist_lists = response.json()
+    return mdblist_lists
 
 
 def main():

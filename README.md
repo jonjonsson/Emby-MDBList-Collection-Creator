@@ -42,10 +42,7 @@ There are two methods to create Emby collections from MDBList lists:
 
 * Refer to `config.cfg` for examples.
 * This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/).
-* The `config.cfg` file contains a few examples. Use these as a guide to add more lists. The parameters you'll encounter are:
-  * "Id" - The ID of the MDBList you want to use. This can be found by viewing the source of the MDBList page and looking for "?list="
-  * "Frequency" - The frequency at which the collection is updated. 100 = 100% of the time, 50 = 50% of the time, etc. The collections will always be created if they do not previously exist.
-  * "Source" - This field is optional and is for your own records.
+* The `config.cfg` file contains a few examples. Use these as a guide to add more lists. 
 
 ### 2. Automatically Download Your Lists from MDBList
 
