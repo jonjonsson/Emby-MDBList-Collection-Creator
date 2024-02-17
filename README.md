@@ -50,8 +50,11 @@ By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com
 
 ## Changelog
 
-Version 1.1: Can use lists by specifing MDBList name and user name of creator instead of having to know the ID. No change required for config.cfg. See example config.cfg on how to use it.
-Version 1.2: Optionally change the sort name of Emby Collections so that the collections that get modified are ordered first. On by default. Optionally add "update_collection_sort_name = False" to config.cfg to disable.
+### Version 1.1
+Can use lists by specifing MDBList name and user name of creator instead of having to know the ID. No change required for config.cfg. See example config.cfg on how to use it.
+
+### Version 1.2
+Optionally change the sort name of Emby Collections so that the collections that get modified are ordered first. On by default. Optionally add "update_collection_sort_name = False" to config.cfg to disable.
 
 ## Frequently Asked Questions
 
