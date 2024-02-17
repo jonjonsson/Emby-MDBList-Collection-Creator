@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator
+# Emby MDBList Collection Creator 1.2
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API.
 
@@ -47,6 +47,11 @@ There are two methods to create Emby collections from MDBList lists:
 ### 2. Automatically Download Your Lists from MDBList
 
 By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com/mylists/)), Emby collections will be automatically created from your saved lists. This feature can be turned off in `config.cfg`. Please ensure your newly created MDBLists populate items before running the script.
+
+## Changelog
+
+Version 1.1: Can use lists by specifing MDBList name and user name of creator instead of having to know the ID. No change required for config.cfg. See example config.cfg on how to use it.
+Version 1.2: Optionally change the sort name of Emby Collections so that the collections that get modified are ordered first. On by default. Optionally add "update_collection_sort_name = False" to config.cfg to disable.
 
 ## Frequently Asked Questions
 

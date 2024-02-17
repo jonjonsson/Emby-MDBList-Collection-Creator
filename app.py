@@ -3,6 +3,7 @@ import time
 import configparser
 from emby import Emby
 from mdblist import Mdblist
+from datetime import datetime
 
 ## Helpful URLS for dev:
 # https://swagger.emby.media/?staticview=true#/
@@ -21,10 +22,13 @@ emby_user_id = config_parser.get("admin", "emby_user_id")
 emby_api_key = config_parser.get("admin", "emby_api_key")
 mdblist_api_key = config_parser.get("admin", "mdblist_api_key")
 download_manually_added_lists = config_parser.getboolean(
-    "admin", "download_manually_added_lists"
+    "admin", "download_manually_added_lists", fallback=True
 )
 download_my_mdblist_lists_automatically = config_parser.getboolean(
-    "admin", "download_my_mdblist_lists_automatically"
+    "admin", "download_my_mdblist_lists_automatically", fallback=True
+)
+update_collection_sort_name = config_parser.getboolean(
+    "admin", "update_collection_sort_name", fallback=True
 )
 hours_between_refresh = config_parser.getint("admin", "hours_between_refresh")
 
@@ -36,7 +40,30 @@ mdblist = Mdblist(mdblist_api_key)
 
 
 def find_missing_entries_in_list(list_to_check, list_to_find):
+    """
+    Finds the missing entries in a list.
+
+    Args:
+        list_to_check (list): The list to check against.
+        list_to_find (list): The list to find missing entries in.
+
+    Returns:
+        list: A list of missing entries found in list_to_find.
+    """
     return [item for item in list_to_find if item not in list_to_check]
+
+
+def minutes_until_2100():
+    """
+    Used for sorting collection so that the newest show up first in Emby.
+    Returns:
+        int: The number of minutes remaining until the year 2100.
+    """
+    today = datetime.now()
+    year_2100 = datetime(2100, 1, 1)
+    delta = year_2100 - today
+    minutes = delta.days * 24 * 60 + delta.seconds // 60
+    return minutes
 
 
 def process_list(mdblist_list: dict):
@@ -128,13 +155,21 @@ def process_list(mdblist_list: dict):
             )
             print("=========================================")
             return
-        emby.create_collection(
+        collection_id = emby.create_collection(
             collection_name, [add_emby_ids[0]]
         )  # Create the collection with the first item since you have to create with an item
         add_emby_ids.pop(0)
 
-    newly_added += emby.add_to_collection(collection_name, add_emby_ids)
+    items_added = emby.add_to_collection(collection_name, add_emby_ids)
+    newly_added += items_added
     newly_removed += emby.delete_from_collection(collection_name, remove_emby_ids)
+
+    # Change sort name so that it shows up first.
+    if update_collection_sort_name is True and items_added > 0:
+        collection_sort_name = f"!{minutes_until_2100()} {collection_name}"
+        emby.set_item_property(collection_id, "ForcedSortName", collection_sort_name)
+        print(f"Updated sort name for {collection_name} to {collection_sort_name}")
+
     print("=========================================")
 
 

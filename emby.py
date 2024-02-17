@@ -11,7 +11,7 @@ class Emby:
         self.headers = {"X-MediaBrowser-Token": api_key}
         # To prevent too long URLs, queries are done in batches of n
         self.api_batch_size = 50
-        self.seconds_between_requests = 10
+        self.seconds_between_requests = 2
 
     def get_system_info(self):
         endpoint = "/emby/System/Info"
@@ -121,19 +121,51 @@ class Emby:
         """
         if item_ids is None or len(item_ids) == 0:
             print("Can't create collection, no items to add to it.")
-            return False
+            return None
 
         response = requests.post(
-            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={collection_name}&Ids={Emby.ids_to_str(item_ids)}"
+            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={collection_name}&Ids={Emby.__ids_to_str(item_ids)}"
         )
 
         if response.status_code != 200:
             print(f"Error creating {collection_name}, response: {response}")
-            return
+            return None
 
         print(f"Successfully created collection {collection_name}")
+        return response.json()["Id"]
 
-    def ids_to_str(ids: list) -> str:
+    def __get_item(self, item_id) -> dict:
+        endpoint = f"/emby/users/{self.user_id}/items/{item_id}"
+        url = self.server_url + endpoint
+        try:
+            return requests.get(url, headers=self.headers).json()
+        except Exception as e:
+            print(f"Error occurred while getting item: {e}")
+            return None
+
+    def __update_item(self, item_id, data):
+        item = self.__get_item(item_id)
+        if item is None:
+            return None
+        if "ForcedSortName" in data and "SortName" not in item["LockedFields"]:
+            # If adding "ForcedSortName" to data, we must have "SortName" in LockedFields
+            # see https://emby.media/community/index.php?/topic/108814-itemupdateservice-cannot-change-the-sortname-and-forcedsortname/
+            item["LockedFields"].append("SortName")
+        item.update(data)
+        update_item_url = (
+            f"{self.server_url}/emby/Items/{item_id}?api_key={self.api_key}"
+        )
+        try:
+            response = requests.post(update_item_url, json=item, headers=self.headers)
+            return response
+        except Exception as e:
+            print(f"Error occurred while updating item: {e}")
+            return None
+
+    def set_item_property(self, item_id, property_name, property_value):
+        return self.__update_item(item_id, {property_name: property_value})
+
+    def __ids_to_str(ids: list) -> str:
         item_ids = [str(item_id) for item_id in ids]
         return ",".join(item_ids)
 
@@ -180,12 +212,12 @@ class Emby:
 
             if operation == "add":
                 response = requests.post(
-                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.ids_to_str(batch_item_ids)}"
+                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.__ids_to_str(batch_item_ids)}"
                 )
                 affected_count += len(batch_item_ids)
             elif operation == "delete":
                 response = requests.delete(
-                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.ids_to_str(batch_item_ids)}"
+                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.__ids_to_str(batch_item_ids)}"
                 )
                 affected_count += len(batch_item_ids)
 
