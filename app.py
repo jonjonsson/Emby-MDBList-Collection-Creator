@@ -2,6 +2,7 @@ import random
 import time
 import configparser
 from emby import Emby
+from item_sorting import ItemSorting
 from mdblist import Mdblist
 from datetime import datetime
 
@@ -30,13 +31,20 @@ download_my_mdblist_lists_automatically = config_parser.getboolean(
 update_collection_sort_name = config_parser.getboolean(
     "admin", "update_collection_sort_name", fallback=True
 )
+
+update_items_sort_names_default_value = config_parser.getboolean(
+    "admin", "update_items_sort_names_default_value", fallback=False
+)
+
 hours_between_refresh = config_parser.getint("admin", "hours_between_refresh")
 
 newly_added = 0
 newly_removed = 0
+collection_ids_with_custom_sorting = []
 
 emby = Emby(emby_server_url, emby_user_id, emby_api_key)
 mdblist = Mdblist(mdblist_api_key)
+item_sorting = ItemSorting(emby)
 
 
 def find_missing_entries_in_list(list_to_check, list_to_find):
@@ -74,15 +82,20 @@ def process_list(mdblist_list: dict):
     list_id = mdblist_list.get("id", None)
     mdblist_name = mdblist_list.get("mdblist_name", None)
     user_name = mdblist_list.get("user_name", None)
+    update_collection_items_sort_names = mdblist_list.get(
+        "update_items_sort_names", update_items_sort_names_default_value
+    )
 
     collection_id = emby.get_collection_id(collection_name)
-
     if collection_id is None:
         print(f"Collection {collection_name} does not exist. Will create it.")
         frequency = 100  # If collection doesn't exist, download every time
 
     print()
     print("=========================================")
+
+    if update_collection_items_sort_names is True:
+        collection_ids_with_custom_sorting.append(collection_id)
 
     if random.randint(0, 100) > frequency:
         print(f"Skipping mdblist {collection_name} since frequency is {frequency}")
@@ -120,7 +133,7 @@ def process_list(mdblist_list: dict):
 
     if len(mdblist_imdb_ids) == 0:
         print(
-            f"ERROR! No items in mdblist {collection_name}. Will not process this list."
+            f"ERROR! No items in mdblist {collection_name}. Will not process this list. Perhaps you need to wait for it to populate?"
         )
         print("=========================================")
         return
@@ -131,7 +144,7 @@ def process_list(mdblist_list: dict):
     if collection_id is None:
         missing_imdb_ids = mdblist_imdb_ids
     else:
-        collection_items = emby.get_items_in_collection(collection_id)
+        collection_items = emby.get_items_in_collection(collection_id, ["ProviderIds"])
         collection_imdb_ids = [item["Imdb"] for item in collection_items]
         missing_imdb_ids = find_missing_entries_in_list(
             collection_imdb_ids, mdblist_imdb_ids
@@ -200,6 +213,9 @@ def process_hardcoded_lists():
                         section, "List_Name", fallback=None
                     ),
                     "user_name": config_parser.get(section, "User_Name", fallback=None),
+                    "update_items_sort_names": config_parser.getboolean(
+                        section, "update_items_sort_names", fallback=False
+                    ),
                 }
             )
         except configparser.NoOptionError as e:
@@ -220,6 +236,16 @@ def main():
     # print()
     # print(f"MDBList User Info: {mdblist.get_mdblist_user_info()}")
     # print()
+    # emby.set_item_property(662180, "ForcedSortName", "!!![123]¡Three Amigos!")
+
+    # item_sorting.process_collection(6055986)
+    # item_sorting.process_collection(1847407)
+    # item_sorting.reset_items_not_in_custom_sort_categories()
+
+    # x = emby.get_all_movies_and_series_starting_with_sort_name("  ")
+
+    # print(x)
+    # return
 
     while True:
         if download_manually_added_lists:
@@ -237,6 +263,11 @@ def main():
         )
         newly_added = 0
         newly_removed = 0
+
+        for collection_id in collection_ids_with_custom_sorting:
+            item_sorting.process_collection(collection_id)
+
+        item_sorting.reset_items_not_in_custom_sort_categories()
 
         if hours_between_refresh == 0:
             break

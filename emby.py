@@ -11,7 +11,7 @@ class Emby:
         self.headers = {"X-MediaBrowser-Token": api_key}
         # To prevent too long URLs, queries are done in batches of n
         self.api_batch_size = 50
-        self.seconds_between_requests = 2
+        self.seconds_between_requests = 1
 
     def get_system_info(self):
         endpoint = "/emby/System/Info"
@@ -25,6 +25,44 @@ class Emby:
         user_list_response = requests.get(user_list_url, headers=self.headers)
         user_list = user_list_response.json()
         return user_list
+
+    def get_all_movies_and_series_starting_with_sort_name(self, filter: str):
+        """
+        Retrieves all movies and series whose SortName starts with the specified filter.
+        Must be queried like this because it's not possible to search for SortName directly.
+
+        Args:
+            filter (str): The filter to match the SortName against.
+
+        Returns:
+            list: A list of items (movies and series) whose SortName starts with the filter.
+        """
+        limit = 20
+        start_index = 0
+        print(
+            f"EMBY: Retrieving items that have SortName starting with '{filter}', limit: {limit}, waiting {self.seconds_between_requests} seconds between requests."
+        )
+        endpoint = f"/emby/users/{self.user_id}/items?Limit={limit}&Fields=SortName&Recursive=true&IncludeItemTypes=Movie,Series&SortBy=SortName&StartIndex={start_index}"
+        url = self.server_url + endpoint
+        response = requests.get(url, headers=self.headers)
+        items = response.json()
+        filtered_items = []
+        while items["Items"]:
+            found_filter = False
+            for item in items["Items"]:
+                if item["SortName"].startswith(filter):
+                    filtered_items.append(item)
+                    found_filter = True
+            if found_filter:
+                time.sleep(self.seconds_between_requests)
+                start_index += limit
+                endpoint = f"/emby/users/{self.user_id}/items?Limit={limit}&Fields=SortName&Recursive=true&IncludeItemTypes=Movie,Series&SortBy=SortName&StartIndex={start_index}"
+                url = self.server_url + endpoint
+                response = requests.get(url, headers=self.headers)
+                items = response.json()
+            else:
+                break
+        return filtered_items
 
     def get_items_with_imdb_id(self, imdb_ids: list) -> list:
         """
@@ -77,34 +115,52 @@ class Emby:
         for item in items["Items"]:
             items_in_collection = None
             if include_contents:
-                items_in_collection = self.get_items_in_collection(item["Id"])
+                items_in_collection = self.get_items_in_collection(
+                    item["Id"], ["ProviderIds"]
+                )
             collections_list.append(
                 {"Name": item["Name"], "Id": item["Id"], "items": items_in_collection}
             )
 
         return collections_list
 
-    def get_items_in_collection(self, collection_id):
+    def get_items_in_collection(self, collection_id: int, fields: list = None):
         """
         Retrieves items in a collection based on the provided collection ID.
 
         Args:
             collection_id (str or int): The ID of the collection.
+            fields (list): List of fields to include in the response. Defaults to None.
 
         Returns:
             list: A list of dictionaries containing the structured items in the collection.
-                Each dictionary contains the item ID and the IMDb ID (if available).
+                Each dictionary contains the specified fields for each item.
         """
-        endpoint = f"/emby/users/{self.user_id}/items?Parentid={collection_id}&Fields=ProviderIds"
+        endpoint = f"/emby/users/{self.user_id}/items?Parentid={collection_id}"
+        if fields:
+            fields_str = ",".join(fields)
+            endpoint += f"&Fields={fields_str}"
         url = self.server_url + endpoint
         response = requests.get(url, headers=self.headers)
         items = response.json()
         structured_items = []
         for item in items["Items"]:
-            imdb_id = item["ProviderIds"].get("Imdb") or item["ProviderIds"].get(
-                "IMDB"
-            )  # "Imdb" is sometimes all caps and sometimes not!
-            structured_items.append({"Id": item["Id"], "Imdb": imdb_id})
+            add_item = {
+                "Id": item["Id"],
+                "Name": item["Name"],
+                "Type": item["Type"],
+            }
+            if "ProviderIds" in item:
+                # Need special treatment because "Imdb" is sometimes all caps and sometimes not!
+                imdb_id = item["ProviderIds"].get("Imdb") or item["ProviderIds"].get(
+                    "IMDB"
+                )
+                add_item["Imdb"] = imdb_id
+
+            for field in fields:
+                add_item[field] = item.get(field)
+
+            structured_items.append(add_item)
         return structured_items
 
     def create_collection(self, collection_name, item_ids) -> bool:
@@ -157,6 +213,10 @@ class Emby:
         )
         try:
             response = requests.post(update_item_url, json=item, headers=self.headers)
+            print(
+                f"Updated item {item_id} with {data}. Waiting {self.seconds_between_requests} seconds."
+            )
+            time.sleep(self.seconds_between_requests)
             return response
         except Exception as e:
             print(f"Error occurred while updating item: {e}")
