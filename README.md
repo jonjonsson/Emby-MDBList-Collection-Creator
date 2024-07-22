@@ -1,6 +1,6 @@
-# Emby MDBList Collection Creator 1.2
+# Emby MDBList Collection Creator 1.4
 
-This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API.
+This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
 ## Prerequisites:
 
@@ -58,6 +58,18 @@ You can set this on by default for all collection in the config or set it per co
 
 When an item is no longer in a collection that requires it to have a custom sort name the old sort name is restored. 
 
+## Keeping rating up to date for newly released items
+Helps to keep the ratings of  new movies and shows up to date until the rating settles a bit on IMDB etc. See more in config.cfg.
+
+## Backing up IsWatched and Favorites
+Kind of a bolted on functionality since it's unrelated to the main function of the script, but I needed it so I added it.
+
+### Backuping up
+Run app_backup.py to save IsWatched and Favorites for all users to json files, the files will be saved to a "backup" directory. If you only want to use this functionality it's enough to fill out "emby_server_url", "emby_user_id" and "emby_api_key" in the config file.
+
+### Restoring backup
+Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, use command line to specify host, api key, user and json file. See app_restore_backup.py
+
 ## Changelog
 
 ### Version 1.1
@@ -68,6 +80,9 @@ Optionally change the sort name of Emby Collections so that the collections that
 
 ### Version 1.3
 Optionally set sort names of items so that the newest items show first in the collection.
+
+### Version 1.4
+Optionally refresh metadata for newly added media. Added 2 scripts to backup IsWatched and Favorites for all users. 
 
 ## Frequently Asked Questions
 

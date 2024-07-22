@@ -1,1 +1,3 @@
 config_hidden.cfg
+__pycache__/
+backup/

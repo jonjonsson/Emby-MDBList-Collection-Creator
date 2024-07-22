@@ -44,6 +44,10 @@ class ItemSorting:
         Iterate over collection with sorting required and add sorting name if missing.
         """
 
+        if category_id is None:
+            print("Error: Category ID is None")
+            return
+
         # Set DisplayOrder for collection
         # https://emby.media/community/index.php?/topic/124081-set-display-order-of-a-collection-with-api/
         self.emby.set_item_property(category_id, "DisplayOrder", "SortName")
@@ -51,6 +55,11 @@ class ItemSorting:
         items_in_collection = self.emby.get_items_in_collection(
             category_id, ["SortName", "DateCreated"]
         )
+
+        if items_in_collection is None:
+            print(f"Error: Should not return None for collection {category_id}")
+            return
+
         for item in items_in_collection:
             # Example item: {'Id': '1541497', 'SortName': 'Elemental', 'DateCreated': '2023-12-08T09:27:58.0000000Z'}
             self.items_ids_with_new_sort_names.append(item["Id"])
@@ -68,11 +77,10 @@ class ItemSorting:
         Get all items from emby that have a sorting name and check if they are in the above list.
         If not reset the sorting list.
         """
-        items_with_sort_name = (
-            self.emby.get_all_movies_and_series_starting_with_sort_name(
-                self.sort_name_start
-            )
+        items_with_sort_name = self.emby.get_items_starting_with_sort_name(
+            self.sort_name_start
         )
+        print()
         for item in items_with_sort_name:
             if item["Id"] not in self.items_ids_with_new_sort_names:
                 self.__remove_sort_name(item)

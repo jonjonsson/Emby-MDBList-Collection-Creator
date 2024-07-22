@@ -3,6 +3,7 @@ import time
 import configparser
 from emby import Emby
 from item_sorting import ItemSorting
+from refresher import Refresher
 from mdblist import Mdblist
 from datetime import datetime
 
@@ -36,15 +37,27 @@ update_items_sort_names_default_value = config_parser.getboolean(
     "admin", "update_items_sort_names_default_value", fallback=False
 )
 
+refresh_items = config_parser.getboolean(
+    "admin", "refresh_items_in_collections", fallback=False
+)
+refresh_items_max_days_since_added = config_parser.getint(
+    "admin", "refresh_items_in_collections_max_days_since_added", fallback=10
+)
+refresh_items_max_days_since_premiered = config_parser.getint(
+    "admin", "refresh_items_in_collections_max_days_since_premiered", fallback=30
+)
+
 hours_between_refresh = config_parser.getint("admin", "hours_between_refresh")
 
 newly_added = 0
 newly_removed = 0
 collection_ids_with_custom_sorting = []
+all_collections_ids = []
 
 emby = Emby(emby_server_url, emby_user_id, emby_api_key)
 mdblist = Mdblist(mdblist_api_key)
 item_sorting = ItemSorting(emby)
+refresher = Refresher(emby)
 
 
 def find_missing_entries_in_list(list_to_check, list_to_find):
@@ -94,17 +107,15 @@ def process_list(mdblist_list: dict):
     print()
     print("=========================================")
 
-    if update_collection_items_sort_names is True:
-        collection_ids_with_custom_sorting.append(collection_id)
-
     if random.randint(0, 100) > frequency:
         print(f"Skipping mdblist {collection_name} since frequency is {frequency}")
         print("=========================================")
         return
 
     mdblist_imdb_ids = None
+    mdblist_mediatypes = []
     if list_id is not None:
-        mdblist_imdb_ids = mdblist.get_list(list_id)
+        mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(list_id)
     elif mdblist_name is not None and user_name is not None:
         found_list_id = mdblist.find_list_id_by_name_and_user(mdblist_name, user_name)
         if found_list_id is None:
@@ -113,7 +124,7 @@ def process_list(mdblist_list: dict):
             )
             print("=========================================")
             return
-        mdblist_imdb_ids = mdblist.get_list(found_list_id)
+        mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(found_list_id)
     else:
         print(
             f"ERROR! Must provide either list_id or both list_name and user_name for mdblist {collection_name}. Will not process this list."
@@ -138,13 +149,23 @@ def process_list(mdblist_list: dict):
         print("=========================================")
         return
 
-    print(f"Processing {collection_name}. List has {len(mdblist_imdb_ids)} IMDB IDs.")
+    print(f"Processing {collection_name}. List has {len(mdblist_imdb_ids)} IMDB IDs")
     collection_id = emby.get_collection_id(collection_name)
 
     if collection_id is None:
         missing_imdb_ids = mdblist_imdb_ids
     else:
-        collection_items = emby.get_items_in_collection(collection_id, ["ProviderIds"])
+        if update_collection_items_sort_names is True:
+            collection_ids_with_custom_sorting.append(collection_id)
+        try:
+            collection_items = emby.get_items_in_collection(
+                collection_id, ["ProviderIds"]
+            )
+        except Exception as e:
+            print(f"Error getting items in collection: {e}")
+            print("=========================================")
+            return
+
         collection_imdb_ids = [item["Imdb"] for item in collection_items]
         missing_imdb_ids = find_missing_entries_in_list(
             collection_imdb_ids, mdblist_imdb_ids
@@ -155,10 +176,11 @@ def process_list(mdblist_list: dict):
                 remove_emby_ids.append(item["Id"])
 
     # Need Emby Item Ids instead of IMDB IDs to add to collection
-    add_emby_ids = emby.get_items_with_imdb_id(missing_imdb_ids)
+    add_emby_ids = emby.get_items_with_imdb_id(missing_imdb_ids, mdblist_mediatypes)
 
+    print()
     print(
-        f"Added {len(add_emby_ids)} new items to Collection and removed {len(remove_emby_ids)}."
+        f"Added {len(add_emby_ids)} new items to Collection and removed {len(remove_emby_ids)}"
     )
 
     if collection_id is None:
@@ -172,6 +194,9 @@ def process_list(mdblist_list: dict):
             collection_name, [add_emby_ids[0]]
         )  # Create the collection with the first item since you have to create with an item
         add_emby_ids.pop(0)
+
+    if collection_id not in all_collections_ids:
+        all_collections_ids.append(collection_id)
 
     items_added = emby.add_to_collection(collection_name, add_emby_ids)
     newly_added += items_added
@@ -236,16 +261,6 @@ def main():
     # print()
     # print(f"MDBList User Info: {mdblist.get_mdblist_user_info()}")
     # print()
-    # emby.set_item_property(662180, "ForcedSortName", "!!![123]¡Three Amigos!")
-
-    # item_sorting.process_collection(6055986)
-    # item_sorting.process_collection(1847407)
-    # item_sorting.reset_items_not_in_custom_sort_categories()
-
-    # x = emby.get_all_movies_and_series_starting_with_sort_name("  ")
-
-    # print(x)
-    # return
 
     while True:
         if download_manually_added_lists:
@@ -254,24 +269,40 @@ def main():
         if download_my_mdblist_lists_automatically:
             process_my_lists_on_mdblist()
 
-        print()
         print(
-            f"SUMMARY: Added {newly_added} items in total to collections and removed {newly_removed} items."
-        )
-        print(
-            f"Waiting {hours_between_refresh} hours for next refresh. Iteration {iterations}"
+            f"\nSUMMARY: Added {newly_added} to collections and removed {newly_removed}\n"
         )
         newly_added = 0
         newly_removed = 0
 
-        for collection_id in collection_ids_with_custom_sorting:
-            item_sorting.process_collection(collection_id)
+        if len(collection_ids_with_custom_sorting) > 0:
+            print("Setting sort names for new items in collections")
+            for collection_id in collection_ids_with_custom_sorting:
+                item_sorting.process_collection(collection_id)
+
+            print(
+                "\n\nReverting sort names that are no longer in collections, fetching items:"
+            )
 
         item_sorting.reset_items_not_in_custom_sort_categories()
+
+        if refresh_items is True:
+            print(
+                f"\nRefreshing metadata for items that were added within {refresh_items_max_days_since_added} days AND premiered within {refresh_items_max_days_since_premiered} days."
+            )
+
+        for collection_id in all_collections_ids:
+            if refresh_items is True:
+                refresher.process_collection(
+                    collection_id,
+                    refresh_items_max_days_since_added,
+                    refresh_items_max_days_since_premiered,
+                )
 
         if hours_between_refresh == 0:
             break
 
+        print(f"\n\nWaiting {hours_between_refresh} hours for next refresh.\n\n")
         time.sleep(hours_between_refresh * 3600)
         iterations += 1
 

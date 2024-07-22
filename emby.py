@@ -12,12 +12,20 @@ class Emby:
         # To prevent too long URLs, queries are done in batches of n
         self.api_batch_size = 50
         self.seconds_between_requests = 1
+        # get system info to see if it works
+        self.system_info = self.get_system_info()
 
     def get_system_info(self):
         endpoint = "/emby/System/Info"
         url = self.server_url + endpoint
         response = requests.get(url, headers=self.headers)
-        return response.json()
+        try:
+            return response.json()
+        except Exception as e:
+            print(
+                f"Error occurred while getting system info, check your configuration: {e}"
+            )
+            return None
 
     def get_users(self):
         user_list_endpoint = "/emby/Users"
@@ -26,7 +34,7 @@ class Emby:
         user_list = user_list_response.json()
         return user_list
 
-    def get_all_movies_and_series_starting_with_sort_name(self, filter: str):
+    def get_items_starting_with_sort_name(self, filter, limit=20):
         """
         Retrieves all movies and series whose SortName starts with the specified filter.
         Must be queried like this because it's not possible to search for SortName directly.
@@ -37,63 +45,67 @@ class Emby:
         Returns:
             list: A list of items (movies and series) whose SortName starts with the filter.
         """
-        limit = 20
+        limit = 50
         start_index = 0
-        print(
-            f"EMBY: Retrieving items that have SortName starting with '{filter}', limit: {limit}, waiting {self.seconds_between_requests} seconds between requests."
-        )
-        endpoint = f"/emby/users/{self.user_id}/items?Limit={limit}&Fields=SortName&Recursive=true&IncludeItemTypes=Movie,Series&SortBy=SortName&StartIndex={start_index}"
-        url = self.server_url + endpoint
-        response = requests.get(url, headers=self.headers)
-        items = response.json()
         filtered_items = []
-        while items["Items"]:
-            found_filter = False
-            for item in items["Items"]:
+        found_sort_name = True
+
+        while found_sort_name:
+
+            items = self.get_items(
+                fields=["SortName"],
+                include_item_types=["Movie", "Series"],
+                sort_by="SortName",
+                limit=limit,
+                start_index=start_index,
+                getAll=False,
+            )
+
+            for item in items:
                 if item["SortName"].startswith(filter):
                     filtered_items.append(item)
-                    found_filter = True
-            if found_filter:
-                time.sleep(self.seconds_between_requests)
-                start_index += limit
-                endpoint = f"/emby/users/{self.user_id}/items?Limit={limit}&Fields=SortName&Recursive=true&IncludeItemTypes=Movie,Series&SortBy=SortName&StartIndex={start_index}"
-                url = self.server_url + endpoint
-                response = requests.get(url, headers=self.headers)
-                items = response.json()
-            else:
-                break
+                else:
+                    found_sort_name = False
+                    break
+
+            time.sleep(self.seconds_between_requests)
+            start_index += limit
+
         return filtered_items
 
-    def get_items_with_imdb_id(self, imdb_ids: list) -> list:
-        """
-        Accepts IMDB IDs as a list and returns a list of Emby Item IDs.
-        Processed in batches of n to prevent too long URLs.
-        """
+    def get_items_with_imdb_id(self, imdb_ids, item_types=None):
         batch_size = self.api_batch_size
         returned_items = []
-        num_batches = len(imdb_ids) // batch_size + (len(imdb_ids) % batch_size > 0)
         gotten_item_names = []
 
-        print(f"Retrieving IMDB IDs from Emby library in {num_batches} batches.")
+        if item_types is None:
+            item_types = ["Movie", "Series"]
+        else:
+            item_types = [
+                (
+                    "Series"
+                    if item_type.lower() in ["tv", "show"]
+                    else "Movie" if item_type.lower() == "movie" else item_type
+                )
+                for item_type in item_types
+            ]
 
-        for i in range(num_batches):
-            start_index = i * batch_size
-            end_index = (i + 1) * batch_size
-            batch_imdb_ids = imdb_ids[start_index:end_index]
+        for i in range(0, len(imdb_ids), batch_size):
+            batch_imdb_ids = imdb_ids[i : i + batch_size]
             imdb_ids_str = ",".join(["imdb." + imdb_id for imdb_id in batch_imdb_ids])
-            endpoint = f"/emby/users/{self.user_id}/items?Fields=ChildCount,RecursiveItemCount&Recursive=true&IncludeItemTypes=Movie,Series&AnyProviderIdEquals={imdb_ids_str}"
-            url = self.server_url + endpoint
-            response = requests.get(url, headers=self.headers)
-            items = response.json()
-            for item in items["Items"]:
-                if item["Name"] in gotten_item_names:
-                    continue
-                returned_items.append(item["Id"])
-                gotten_item_names.append(item["Name"])
-            print(
-                f"Found {len(items['Items'])} items in batch {i+1} that need to be added Emby Collection. Waiting {self.seconds_between_requests} seconds."
+
+            items = self.get_items(
+                params={"AnyProviderIdEquals": imdb_ids_str},
+                fields=["ChildCount", "RecursiveItemCount"],
+                include_item_types=item_types,
+                limit=batch_size,
             )
-            time.sleep(self.seconds_between_requests)
+
+            for item in items:
+                if item["Name"] not in gotten_item_names:
+                    returned_items.append(item["Id"])
+                    gotten_item_names.append(item["Name"])
+
         return returned_items
 
     def get_all_collections(self, include_contents=True):
@@ -142,7 +154,14 @@ class Emby:
             endpoint += f"&Fields={fields_str}"
         url = self.server_url + endpoint
         response = requests.get(url, headers=self.headers)
-        items = response.json()
+
+        try:
+            items = response.json()
+        except Exception as e:
+            print(
+                f"Error occurred while getting items in collection id {collection_id} using url {url} response was {response}: {e}"
+            )
+            return None
         structured_items = []
         for item in items["Items"]:
             add_item = {
@@ -190,7 +209,7 @@ class Emby:
         print(f"Successfully created collection {collection_name}")
         return response.json()["Id"]
 
-    def __get_item(self, item_id) -> dict:
+    def get_item(self, item_id) -> dict:
         endpoint = f"/emby/users/{self.user_id}/items/{item_id}"
         url = self.server_url + endpoint
         try:
@@ -199,8 +218,157 @@ class Emby:
             print(f"Error occurred while getting item: {e}")
             return None
 
+    def set_item_property(self, item_id, property_name, property_value):
+        return self.__update_item(item_id, {property_name: property_value})
+
+    def get_collection_id(self, collection_name):
+        all_collections = self.get_all_collections(False)
+        collection_found = False
+
+        for collection in all_collections:
+            if collection_name == collection["Name"]:
+                collection_found = True
+                collection_id = collection["Id"]
+                break
+
+        if collection_found is False:
+            return None
+
+        return collection_id
+
+    def add_to_collection(self, collection_name, item_ids) -> int:
+        # Returns the number of items added to the collection
+        return self.__add_remove_from_collection(collection_name, item_ids, "add")
+
+    def delete_from_collection(self, collection_name, item_ids) -> int:
+        # Returns the number of items deleted from the collection
+        return self.__add_remove_from_collection(collection_name, item_ids, "delete")
+
+    def refresh_item(self, item_id):
+        # Refreshes metadata for a specific item
+        response = requests.post(
+            f"{self.server_url}/Items/{item_id}/Refresh?api_key={self.api_key}&ReplaceAllMetadata=true"
+        )
+        time.sleep(self.seconds_between_requests)
+        if response.status_code != 204:
+            print(f"Error refreshing item {item_id}, response: {response}")
+            return False
+        return True
+
+    def get_items(
+        self,
+        params=None,
+        fields=None,
+        include_item_types=None,
+        filters=None,
+        sort_by=None,
+        limit=50,
+        start_index=0,
+        getAll=True,
+    ):
+        """
+        Generic method to retrieve all items from Emby, querying in batches.
+
+        Args:
+            params (dict): Additional parameters to include in the query.
+            fields (list): List of fields to include in the response.
+            include_item_types (list): Types of items to include (e.g., ['Movie', 'Series']).
+            filters (list): Filters to apply to the query.
+            sort_by (str): Field to sort the results by.
+            limit (int): Number of items to query in each batch.
+            start_index (int): Index to start querying from.
+            getAll (bool): Flag to indicate whether to retrieve all items or just the first batch.
+
+        Returns:
+            list: All items retrieved from the Emby API.
+        """
+        endpoint = f"/emby/users/{self.user_id}/items"
+        query_params = {}
+
+        if params:
+            query_params.update(params)
+        if fields:
+            query_params["Fields"] = ",".join(fields)
+        if include_item_types:
+            query_params["IncludeItemTypes"] = ",".join(include_item_types)
+        if filters:
+            query_params["Filters"] = ",".join(filters)
+        if sort_by:
+            query_params["SortBy"] = sort_by
+
+        query_params["Recursive"] = "true"
+        query_params["Limit"] = limit
+
+        url = self.server_url + endpoint
+        all_items = []
+
+        while True:
+            print(".", end="", flush=True)
+            time.sleep(self.seconds_between_requests)
+            query_params["StartIndex"] = start_index
+            response = requests.get(url, headers=self.headers, params=query_params)
+            response_data = response.json()
+
+            if "Items" in response_data:
+                items = response_data["Items"]
+                all_items.extend(items)
+                if len(items) < limit:
+                    break  # We've retrieved all items
+                start_index += limit
+            else:
+                break  # No more items to retrieve
+
+            if not getAll:
+                break
+
+        return all_items
+
+    def set_item_as_played(self, user_id, item_id):
+        """
+        Set an item as played for a specific user.
+
+        Args:
+            user_id (str): The ID of the user.
+            item_id (str): The ID of the item to mark as played.
+
+        Returns:
+            bool: True if the item was marked as played successfully, False otherwise.
+        """
+        endpoint = f"/emby/Users/{user_id}/PlayedItems/{item_id}"
+        url = self.server_url + endpoint
+        response = requests.post(url, headers=self.headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print(
+                f"Error marking item {item_id} as played for user {user_id}: {response.content}"
+            )
+            return False
+
+    def set_item_as_favorite(self, user_id, item_id):
+        """
+        Set an item as a favorite for a specific user.
+
+        Args:
+            user_id (str): The ID of the user.
+            item_id (str): The ID of the item to mark as a favorite.
+
+        Returns:
+            bool: True if the item was marked as a favorite successfully, False otherwise.
+        """
+        endpoint = f"/emby/Users/{user_id}/FavoriteItems/{item_id}"
+        url = self.server_url + endpoint
+        response = requests.post(url, headers=self.headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print(
+                f"Error marking item {item_id} as a favorite for user {user_id}: {response.content}"
+            )
+            return False
+
     def __update_item(self, item_id, data):
-        item = self.__get_item(item_id)
+        item = self.get_item(item_id)
         if item is None:
             return None
         if "ForcedSortName" in data and "SortName" not in item["LockedFields"]:
@@ -222,28 +390,6 @@ class Emby:
             print(f"Error occurred while updating item: {e}")
             return None
 
-    def set_item_property(self, item_id, property_name, property_value):
-        return self.__update_item(item_id, {property_name: property_value})
-
-    def __ids_to_str(ids: list) -> str:
-        item_ids = [str(item_id) for item_id in ids]
-        return ",".join(item_ids)
-
-    def get_collection_id(self, collection_name):
-        all_collections = self.get_all_collections(False)
-        collection_found = False
-
-        for collection in all_collections:
-            if collection_name == collection["Name"]:
-                collection_found = True
-                collection_id = collection["Id"]
-                break
-
-        if collection_found is False:
-            return None
-
-        return collection_id
-
     def __add_remove_from_collection(
         self, collection_name: str, item_ids: list, operation: str
     ) -> int:
@@ -261,14 +407,15 @@ class Emby:
         batch_size = self.api_batch_size
         num_batches = (len(item_ids) + batch_size - 1) // batch_size
 
+        print(
+            f"Processing {collection_name} with '{operation}' in {num_batches} batches"
+        )
+
         for i in range(num_batches):
             start_index = i * batch_size
             end_index = min((i + 1) * batch_size, len(item_ids))
             batch_item_ids = item_ids[start_index:end_index]
-
-            print(
-                f"Processing Collection with operation {operation} batch {i+1} of {num_batches} with {len(batch_item_ids)} items"
-            )
+            print(".", end="", flush=True)
 
             if operation == "add":
                 response = requests.post(
@@ -287,21 +434,13 @@ class Emby:
                 )
                 return affected_count
 
-            print(
-                f"Successfully processed batch {i+1} of {num_batches} with {len(batch_item_ids)} items"
-            )
             time.sleep(self.seconds_between_requests)
 
-        print(
-            f"Completed Collection operation '{operation}' with {len(item_ids)} items in collection {collection_name}"
-        )
+        print()
+        print(f"Finished '{operation}' with {len(item_ids)} items in {collection_name}")
 
         return affected_count
 
-    def add_to_collection(self, collection_name, item_ids) -> int:
-        # Returns the number of items added to the collection
-        return self.__add_remove_from_collection(collection_name, item_ids, "add")
-
-    def delete_from_collection(self, collection_name, item_ids) -> int:
-        # Returns the number of items deleted from the collection
-        return self.__add_remove_from_collection(collection_name, item_ids, "delete")
+    def __ids_to_str(ids: list) -> str:
+        item_ids = [str(item_id) for item_id in ids]
+        return ",".join(item_ids)

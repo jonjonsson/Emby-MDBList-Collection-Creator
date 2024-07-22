@@ -22,6 +22,14 @@ class Mdblist:
         user_info = response.json()
         return user_info
 
+    # Take the json encoded list and return the mediatypes as a list
+    def check_list_mediatype(self, list) -> list:
+        mediatypes = []
+        for item in list:
+            if "mediatype" in item and item["mediatype"] not in mediatypes:
+                mediatypes.append(item["mediatype"])
+        return mediatypes
+
     def get_list(self, list_id):
         url = self.items_url.format(list_id=list_id)
         response = requests.get(url)
@@ -32,10 +40,10 @@ class Mdblist:
                 print(
                     f"ERROR! Cannot find any items in list id {list_id} with api url {url} and public url https://mdblist.com/?list={list_id}."
                 )
-            return imdb_ids
+            return imdb_ids, self.check_list_mediatype(list)
         else:
             print(f"No response received from {url}")
-            return None
+            return None, None
 
     def get_my_lists(self) -> list:
         # Example return
