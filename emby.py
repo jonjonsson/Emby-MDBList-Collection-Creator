@@ -108,6 +108,45 @@ class Emby:
 
         return returned_items
 
+    def get_items_with_tvdb_id(self, tvdb_ids, item_types=None):
+        batch_size = self.api_batch_size
+        returned_items = []
+        gotten_item_names = []
+
+        if item_types is None:
+            item_types = ["Movie", "Series", "Episode"]
+        else:
+            item_types = [
+                (
+                    "Series"
+                    if item_type.lower() in ["tv", "show"]
+                    else (
+                        "Movie"
+                        if item_type.lower() == "movie"
+                        else "Episode" if item_type.lower() == "episode" else item_type
+                    )
+                )
+                for item_type in item_types
+            ]
+
+        for i in range(0, len(tvdb_ids), batch_size):
+            batch_tvdb_ids = tvdb_ids[i : i + batch_size]
+            tvdb_ids_str = ",".join(["tvdb." + tvdb_id for tvdb_id in batch_tvdb_ids])
+
+            items = self.get_items(
+                params={"AnyProviderIdEquals": tvdb_ids_str},
+                fields=["ChildCount", "RecursiveItemCount"],
+                include_item_types=item_types,
+                limit=batch_size,
+            )
+
+            for item in items:
+                if item["Name"] not in gotten_item_names:
+                    returned_items.append(item["Id"])
+                    gotten_item_names.append(item["Name"])
+
+        return returned_items
+
     def get_all_collections(self, include_contents=True):
         """
         Retrieves all collections from the Emby server.
@@ -307,7 +346,14 @@ class Emby:
             time.sleep(self.seconds_between_requests)
             query_params["StartIndex"] = start_index
             response = requests.get(url, headers=self.headers, params=query_params)
-            response_data = response.json()
+
+            try:
+                response_data = response.json()
+            except Exception as e:
+                print(
+                    f"Error getting items using URL {url} params {query_params} with response {response.content}"
+                )
+                return None
 
             if "Items" in response_data:
                 items = response_data["Items"]
