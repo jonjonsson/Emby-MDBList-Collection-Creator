@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.4
+# Emby MDBList Collection Creator 1.5
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
@@ -10,7 +10,7 @@ To use this script, you need:
 * "Requests" Python package (install with `pip install requests`)
 * Admin privileges on Emby
 * A user account on [MDBList](https://mdblist.com/)
-* The script has been tested with Emby Version 4.7.14.0, but other recent versions should also be compatible
+* The script has been tested with Emby Version 4.8.8.0, but other recent versions should also be compatible
 
 ## Usage
 
@@ -38,11 +38,11 @@ python app.py
 
 There are two methods to create Emby collections from MDBList lists:
 
-### 1. Add MDBList IDs to `config.cfg`
+### 1. Add MDBList URLs or IDs to `config.cfg`
 
 * Refer to `config.cfg` for examples.
 * This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/).
-* The `config.cfg` file contains a few examples. Use these as a guide to add more lists. 
+* The `config.cfg` file contains examples. Use these as a guide to add more lists. 
 
 ### 2. Automatically Download Your Lists from MDBList
 
@@ -68,7 +68,7 @@ Kind of a bolted on functionality since it's unrelated to the main function of t
 Run app_backup.py to save IsWatched and Favorites for all users to json files, the files will be saved to a "backup" directory. If you only want to use this functionality it's enough to fill out "emby_server_url", "emby_user_id" and "emby_api_key" in the config file.
 
 ### Restoring backup
-Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, use command line to specify host, api key, user and json file. See app_restore_backup.py
+Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, see comments at top of app_restore_backup.py.
 
 ## Changelog
 
@@ -83,6 +83,9 @@ Optionally set sort names of items so that the newest items show first in the co
 
 ### Version 1.4
 Optionally refresh metadata for newly added media. Added 2 scripts to backup IsWatched and Favorites for all users. 
+
+### Version 1.5
+New preffered method of adding lists by using the mdblist URL instead of the older method of specifying the ID or list name + author. No config file update is required, old methods will still work. See config.cfg for more info.
 
 ## Frequently Asked Questions
 

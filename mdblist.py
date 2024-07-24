@@ -45,6 +45,31 @@ class Mdblist:
             print(f"No response received from {url}")
             return None, None
 
+    def get_list_using_url(self, url):
+        # Just append /json to end of url to get the json version of the list
+        # Check first if json is already in the url
+        if url.endswith("/json"):
+            url = url[:-5]
+
+        # Make sure that url does not end with /
+        if url.endswith("/"):
+            url = url[:-1]
+
+        url = url + "/json"
+
+        response = requests.get(url)
+        if response.text:
+            list = response.json()
+            imdb_ids = [item["imdb_id"] for item in list]
+            if len(imdb_ids) == 0:
+                print(
+                    f"ERROR! Cannot find any items in list with api url {url} and public url {url.replace('/json','')}."
+                )
+            return imdb_ids, self.check_list_mediatype(list)
+        else:
+            print(f"No response received from {url}")
+            return None, None
+
     def get_my_lists(self) -> list:
         # Example return
         # [{"id": 45811, "name": "Trending Movies", "slug": "trending-movies", "items": 20, "likes": null, "dynamic": true, "private": false, "mediatype": "movie", "description": ""}]
@@ -96,17 +121,6 @@ class Mdblist:
                 f"Warning! Found {len(filtered)} lists with name {list_name} by user {user_name}. Will use the first one."
             )
         return filtered[0]["id"]
-
-    def find_list_id_by_url(self, url):
-        # Find list by url, example: https://mdblist.com/lists/betdonkey/best-rottentomatoes-documentaries
-        # where betdonkey is the user_name and best-rottentomatoes-documentaries is the list_name
-        # This is problematic because url is the slug, not the list name and fails often
-        url_parts = url.split("/")
-        user_name = url_parts[-2]
-        list_name = url_parts[-1]
-        list_name = list_name.replace("-", " ")
-        lists = self.find_list_id_by_name_and_user(list_name, user_name)
-        return lists
 
     def get_lists_of_user(self, user_id):
         """

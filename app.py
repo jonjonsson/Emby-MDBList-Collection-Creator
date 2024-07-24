@@ -93,6 +93,7 @@ def process_list(mdblist_list: dict):
     collection_name = mdblist_list["name"]
     frequency = int(mdblist_list.get("frequency", 100))
     list_id = mdblist_list.get("id", None)
+    source = mdblist_list.get("source", None)
     mdblist_name = mdblist_list.get("mdblist_name", None)
     user_name = mdblist_list.get("user_name", None)
     update_collection_items_sort_names = mdblist_list.get(
@@ -125,6 +126,8 @@ def process_list(mdblist_list: dict):
             print("=========================================")
             return
         mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(found_list_id)
+    elif source is not None:
+        mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list_using_url(source)
     else:
         print(
             f"ERROR! Must provide either list_id or both list_name and user_name for mdblist {collection_name}. Will not process this list."
@@ -261,6 +264,13 @@ def main():
     # print()
     # print(f"MDBList User Info: {mdblist.get_mdblist_user_info()}")
     # print()
+
+    # Test getting a list via url
+    # mdblist_list = mdblist.get_list_using_url(
+    #    "https://mdblist.com/lists/amything/external/26503/"
+    # )
+    # print(mdblist_list)
+    # return
 
     while True:
         if download_manually_added_lists:
