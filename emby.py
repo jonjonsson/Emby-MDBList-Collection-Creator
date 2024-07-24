@@ -92,6 +92,10 @@ class Emby:
 
         for i in range(0, len(imdb_ids), batch_size):
             batch_imdb_ids = imdb_ids[i : i + batch_size]
+            # Remove any ids from batch_imdb_ids that are None
+            batch_imdb_ids = [
+                imdb_id for imdb_id in batch_imdb_ids if imdb_id is not None
+            ]
             imdb_ids_str = ",".join(["imdb." + imdb_id for imdb_id in batch_imdb_ids])
 
             items = self.get_items(
