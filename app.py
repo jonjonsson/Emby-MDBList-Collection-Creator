@@ -113,7 +113,7 @@ def process_list(mdblist_list: dict):
         print("=========================================")
         return
 
-    mdblist_imdb_ids = None
+    mdblist_imdb_ids = []
     mdblist_mediatypes = []
     if list_id is not None:
         mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(list_id)
@@ -127,7 +127,14 @@ def process_list(mdblist_list: dict):
             return
         mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(found_list_id)
     elif source is not None:
-        mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list_using_url(source)
+        source = source.replace(" ", "")
+        sources = source.split(",http")
+        # Add http back to all but the first source
+        sources = [sources[0]] + [f"http{url}" for url in sources[1:]]
+        for url in sources:
+            imdb_ids, mediatypes = mdblist.get_list_using_url(url.strip())
+            mdblist_imdb_ids.extend(imdb_ids)
+            mdblist_mediatypes.extend(mediatypes)
     else:
         print(
             f"ERROR! Must provide either list_id or both list_name and user_name for mdblist {collection_name}. Will not process this list."
@@ -152,6 +159,7 @@ def process_list(mdblist_list: dict):
         print("=========================================")
         return
 
+    mdblist_imdb_ids = list(set(mdblist_imdb_ids))  # Remove duplicates
     print(f"Processing {collection_name}. List has {len(mdblist_imdb_ids)} IMDB IDs")
     collection_id = emby.get_collection_id(collection_name)
 

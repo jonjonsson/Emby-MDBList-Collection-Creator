@@ -34,7 +34,12 @@ class Mdblist:
         url = self.items_url.format(list_id=list_id)
         response = requests.get(url)
         if response.text:
-            list = response.json()
+            list = None
+            try:
+                list = response.json()
+            except Exception:
+                print(f"Error! Cannot decode json, make sure URL is valid: {url}")
+                return None, None
             imdb_ids = [item["imdb_id"] for item in list]
             if len(imdb_ids) == 0:
                 print(

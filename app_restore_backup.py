@@ -1,14 +1,13 @@
 """
-This script can restore a backup to another Emby server from previously using app_backup.py 
-and saving Watched and Favorites to a json file.
+This script can restore a backup to another Emby server from previously using app_backup.py.
 
-The script assumed that the new Emby server does not have the same item ID as the old Emby server and
+The script assumes that the new Emby server does not have the same item ID as the old Emby server and
 will lookup all items by IMDB or TVDB ID.
 
-Execute the script from the command line with the required arguments. The script requires the following arguments:
+Execute the script from the command line with the required arguments:
 
 --host: The Emby server host.
---user_id: The user ID for the Emby server (ID not user name).
+--user_id: The user ID for the Emby server (ID string, not the user name).
 --api_key: The API key for accessing the Emby server.
 --source_file: The path to the backup file.
 You can use this if you don't have access to the Emby database but you do have access to the API.

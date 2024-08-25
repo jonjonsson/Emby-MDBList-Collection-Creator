@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.5
+# Emby MDBList Collection Creator 1.6
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
@@ -48,18 +48,18 @@ There are two methods to create Emby collections from MDBList lists:
 
 By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com/mylists/)), Emby collections will be automatically created from your saved lists. This feature can be turned off in `config.cfg`. Please ensure your newly created MDBLists populate items before running the script.
 
-## Sorting Shows and Movies by time added (experimental)
+## Sorting Shows and Movies by time added
 
-Experimental feature that is off by default. Emby can not (yet) sort collections by time added to library. That means you can't sort collections to show what is new first. This is kinda lame if you have a Trending Movies category and you can't see what's new at a glance. 
+This feature that is off by default. Emby can not (yet) sort collections by time added to library. That means you can't sort collections to show what is newest first. This is kinda lame if you have a Trending Movies category and you can't see what's new at a glance. 
 
-To address this you can have this script to update the sort names of items that are in collections. It updates item sort name in the metadata so that the sort name is appended with "!!![number_of_minutes_until_year_2100_from_the_date_time_added_to_emby]". That way the newest items show first in the default alphabetical order. 
+To address this you can have this script update the sort names of items that are in collections. It updates item sort name in the metadata so that the sort name is appended with "!!![number_of_minutes_until_year_2100_from_the_date_time_added_to_emby]". That way the newest items show first in the default alphabetical order. This will affect the sorting of these items elsewhere as well which you may or may not care about, you can always turn it off and the old sort name will be restored on the next run of the script.
 
 You can set this on by default for all collection in the config or set it per collection.
 
 When an item is no longer in a collection that requires it to have a custom sort name the old sort name is restored. 
 
 ## Keeping rating up to date for newly released items
-Helps to keep the ratings of  new movies and shows up to date until the rating settles a bit on IMDB etc. See more in config.cfg.
+Helps to keep the ratings of newly released movies and shows up to date until the rating settles a bit on IMDB etc. See more in config.cfg.
 
 ## Backing up IsWatched and Favorites
 Kind of a bolted on functionality since it's unrelated to the main function of the script, but I needed it so I added it.
@@ -86,6 +86,9 @@ Optionally refresh metadata for newly added media. Added 2 scripts to backup IsW
 
 ### Version 1.5
 New preffered method of adding lists by using the mdblist URL instead of the older method of specifying the ID or list name + author. No config file update is required, old methods will still work. See config.cfg for more info.
+
+### Version 1.6
+Added support for multiple MDBList urls for a single category.
 
 ## Frequently Asked Questions
 
