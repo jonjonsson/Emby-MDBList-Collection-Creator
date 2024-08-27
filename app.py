@@ -166,8 +166,6 @@ def process_list(mdblist_list: dict):
     if collection_id is None:
         missing_imdb_ids = mdblist_imdb_ids
     else:
-        if update_collection_items_sort_names is True:
-            collection_ids_with_custom_sorting.append(collection_id)
         try:
             collection_items = emby.get_items_in_collection(
                 collection_id, ["ProviderIds"]
@@ -208,6 +206,9 @@ def process_list(mdblist_list: dict):
 
     if collection_id not in all_collections_ids:
         all_collections_ids.append(collection_id)
+
+    if update_collection_items_sort_names is True:
+        collection_ids_with_custom_sorting.append(collection_id)
 
     items_added = emby.add_to_collection(collection_name, add_emby_ids)
     newly_added += items_added
