@@ -10,7 +10,7 @@ import os
 
 directory = "backup"
 backup_filters = ["IsPlayed", "IsFavorite"]
-seconds_between_requests = 1
+seconds_between_requests = 10
 
 config_parser = configparser.ConfigParser()
 if config_parser.read("config_hidden.cfg") == []:
@@ -19,6 +19,7 @@ emby_server_url = config_parser.get("admin", "emby_server_url")
 emby_user_id = config_parser.get("admin", "emby_user_id")
 emby_api_key = config_parser.get("admin", "emby_api_key")
 emby = Emby(emby_server_url, emby_user_id, emby_api_key)
+emby.seconds_between_requests = seconds_between_requests
 
 
 def get_all_items(user_id, filter):

@@ -18,21 +18,24 @@ class Emby:
     def get_system_info(self):
         endpoint = "/emby/System/Info"
         url = self.server_url + endpoint
-        response = requests.get(url, headers=self.headers)
         try:
+            response = requests.get(url, headers=self.headers)
             return response.json()
         except Exception as e:
             print(
-                f"Error occurred while getting system info, check your configuration: {e}"
+                f"Error occurred while getting Emby system info, check your configuration. Check your Emby url and port, user ID and API key: {e}"
             )
-            return None
+            raise SystemExit
 
     def get_users(self):
         user_list_endpoint = "/emby/Users"
         user_list_url = self.server_url + user_list_endpoint
         user_list_response = requests.get(user_list_url, headers=self.headers)
-        user_list = user_list_response.json()
-        return user_list
+        try:
+            return user_list_response.json()
+        except Exception as e:
+            print(f"Error occurred while getting users: {e}")
+            return None
 
     def get_items_starting_with_sort_name(self, filter, limit=20):
         """
@@ -164,7 +167,14 @@ class Emby:
         endpoint = f"/emby/users/{self.user_id}/items?Fields=ChildCount,RecursiveItemCount&Recursive=true&IncludeItemTypes=boxset"
         url = self.server_url + endpoint
         response = requests.get(url, headers=self.headers)
-        items = response.json()
+        try:
+            items = response.json()
+        except Exception as e:
+            print(
+                f"Error occurred while getting collections using url {url}: {e}. Response: {response}"
+            )
+            return None
+
         collections_list = []
 
         for item in items["Items"]:
@@ -205,6 +215,7 @@ class Emby:
                 f"Error occurred while getting items in collection id {collection_id} using url {url} response was {response}: {e}"
             )
             return None
+
         structured_items = []
         for item in items["Items"]:
             add_item = {
@@ -237,12 +248,12 @@ class Emby:
         Returns:
             bool: True if the collection is created successfully, False otherwise.
         """
-        if item_ids is None or len(item_ids) == 0:
+        if not item_ids:
             print("Can't create collection, no items to add to it.")
             return None
 
         response = requests.post(
-            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={collection_name}&Ids={Emby.__ids_to_str(item_ids)}"
+            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={collection_name}&Ids={self.__ids_to_str(item_ids)}"
         )
 
         if response.status_code != 200:
@@ -258,7 +269,7 @@ class Emby:
         try:
             return requests.get(url, headers=self.headers).json()
         except Exception as e:
-            print(f"Error occurred while getting item: {e}")
+            print(f"Error occurred while getting item: {e}. URL: {url}.")
             return None
 
     def set_item_property(self, item_id, property_name, property_value):
@@ -355,7 +366,7 @@ class Emby:
                 response_data = response.json()
             except Exception as e:
                 print(
-                    f"Error getting items using URL {url} params {query_params} with response {response.content}"
+                    f"Error getting items using URL {url} params {query_params} with response {response.content}. Error: {e}"
                 )
                 return None
 
@@ -446,7 +457,7 @@ class Emby:
 
         affected_count = 0
 
-        if len(item_ids) == 0:
+        if not item_ids:
             return affected_count
 
         collection_id = self.get_collection_id(collection_name)
@@ -469,14 +480,12 @@ class Emby:
 
             if operation == "add":
                 response = requests.post(
-                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.__ids_to_str(batch_item_ids)}"
+                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={self.__ids_to_str(batch_item_ids)}"
                 )
-                affected_count += len(batch_item_ids)
             elif operation == "delete":
                 response = requests.delete(
-                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={Emby.__ids_to_str(batch_item_ids)}"
+                    f"{self.server_url}/Collections/{collection_id}/Items/?api_key={self.api_key}&Ids={self.__ids_to_str(batch_item_ids)}"
                 )
-                affected_count += len(batch_item_ids)
 
             if response.status_code != 204:
                 print(
@@ -484,6 +493,7 @@ class Emby:
                 )
                 return affected_count
 
+            affected_count += len(batch_item_ids)
             time.sleep(self.seconds_between_requests)
 
         print()
@@ -491,6 +501,7 @@ class Emby:
 
         return affected_count
 
+    @staticmethod
     def __ids_to_str(ids: list) -> str:
         item_ids = [str(item_id) for item_id in ids]
         return ",".join(item_ids)
