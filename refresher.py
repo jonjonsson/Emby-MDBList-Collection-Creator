@@ -19,7 +19,7 @@ class Refresher:
 
     def process_collection(
         self,
-        category_id: int,
+        collection_id: int,
         max_days_since_added: int,
         max_days_since_premiered: int,
         show_rating_change: bool = False,
@@ -29,16 +29,17 @@ class Refresher:
         Both max_days_since_added and max_days_since_premiered must be satisfied for an item to be refreshed.
 
         Args:
-            category_id (int): The ID of the category to process.
+            collection_id (int): The ID of the emby collection to process.
             max_days_since_added (int): Will be refreshed if the item was added to Emby less than this number of days ago.
             max_days_since_premiered (int): Will be refreshed if the item premiered less than this number of days ago.
             show_rating_change (bool): If True, will print the rating change for each item, requires an additional API request for each item.
         """
 
         items_in_collection = self.emby.get_items_in_collection(
-            category_id, ["PremiereDate", "DateCreated", "CommunityRating"]
+            collection_id, ["PremiereDate", "DateCreated", "CommunityRating"]
         )
 
+        current_date = datetime.now()
         for item in items_in_collection:
             # Example item: {'Id': '1541497', 'PremiereDate': '2023-11-08T09:27:58.0000000Z', 'DateCreated': '2023-12-08T09:27:58.0000000Z'}
             # Check if DateCreated is less than 7 days and PremiereDate is less than 30 days
@@ -50,7 +51,6 @@ class Refresher:
 
             self.processed_items.append(item["Id"])
 
-            current_date = datetime.now()
             created_date = datetime.fromisoformat(
                 item["DateCreated"].replace("Z", "+00:00")
             )

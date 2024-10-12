@@ -263,6 +263,24 @@ class Emby:
         print(f"Successfully created collection {collection_name}")
         return response.json()["Id"]
 
+    def delete_item(self, item_id) -> bool:
+        """
+        Deletes an item from the Emby server.
+
+        Args:
+            item_id (str): The ID of the item to be deleted.
+
+        Returns:
+            bool: True if the item is deleted successfully, False otherwise.
+        """
+
+        url = f"{self.server_url}/Items?{item_id}&api_key={self.api_key}"
+        response = requests.delete(url)
+        if response.status_code == 204:
+            return True
+        else:
+            return False
+
     def get_item(self, item_id) -> dict:
         endpoint = f"/emby/users/{self.user_id}/items/{item_id}"
         url = self.server_url + endpoint
@@ -290,11 +308,11 @@ class Emby:
 
         return collection_id
 
-    def add_to_collection(self, collection_name, item_ids) -> int:
+    def add_to_collection(self, collection_name, item_ids: list) -> int:
         # Returns the number of items added to the collection
         return self.__add_remove_from_collection(collection_name, item_ids, "add")
 
-    def delete_from_collection(self, collection_name, item_ids) -> int:
+    def delete_from_collection(self, collection_name, item_ids: list) -> int:
         # Returns the number of items deleted from the collection
         return self.__add_remove_from_collection(collection_name, item_ids, "delete")
 

@@ -39,25 +39,25 @@ class ItemSorting:
     def has_sorting_name(self, sort_name: str):
         return sort_name.startswith(self.sort_name_start)
 
-    def process_collection(self, category_id: int):
+    def process_collection(self, collection_id: int):
         """
         Iterate over collection with sorting required and add sorting name if missing.
         """
 
-        if category_id is None:
+        if collection_id is None:
             print("Error: Category ID is None")
             return
 
         # Set DisplayOrder for collection
         # https://emby.media/community/index.php?/topic/124081-set-display-order-of-a-collection-with-api/
-        self.emby.set_item_property(category_id, "DisplayOrder", "SortName")
+        self.emby.set_item_property(collection_id, "DisplayOrder", "SortName")
 
         items_in_collection = self.emby.get_items_in_collection(
-            category_id, ["SortName", "DateCreated"]
+            collection_id, ["SortName", "DateCreated"]
         )
 
         if items_in_collection is None:
-            print(f"Error: Should not return None for collection {category_id}")
+            print(f"Error: Should not return None for collection {collection_id}")
             return
 
         for item in items_in_collection:

@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.62
+# Emby MDBList Collection Creator 1.7
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
@@ -61,6 +61,9 @@ When an item is no longer in a collection that requires it to have a custom sort
 ## Keeping rating up to date for newly released items
 Helps to keep the ratings of newly released movies and shows up to date until the rating settles a bit on IMDB etc. See more in config.cfg.
 
+## Seasonal lists
+You can specify a period of the year to show a collection for. For example only show a collection during Christmas every year. You can also specify an end date so a collection does not show again after a specific date, useful for something like this years Oscars collection that you don't want to be hanging about forever. See example in config file.
+
 ## Backing up IsWatched and Favorites
 Kind of a bolted on functionality since it's unrelated to the main function of the script, but I needed it so I added it.
 
@@ -92,6 +95,9 @@ Added support for multiple MDBList urls for a single category.
 
 ### Version 1.61 + 1.62
 Fix for item sort names not being updated unless collection existed prior. Additional error handling.
+
+### Version 1.7
+Added ability to have seasonal or temporary lists like for Halloween, Christmas, Oscars etc. Thanks to @cj0r for the idea. See example in config file. No breaking changes for any older version.
 
 ## Frequently Asked Questions
 

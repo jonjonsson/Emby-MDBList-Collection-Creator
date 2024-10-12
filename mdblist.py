@@ -70,7 +70,7 @@ class Mdblist:
                 if "imdb_id" in item:
                     imdb_ids.append(item["imdb_id"])
                 else:
-                    print(f"Couyld not find imdb_id in item {item}.")
+                    print(f"Could not find imdb_id in item {item}.")
             if len(imdb_ids) == 0:
                 print(
                     f"ERROR! Cannot find any items in list with api url {url} and public url {url.replace('/json','')}."

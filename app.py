@@ -6,6 +6,7 @@ from item_sorting import ItemSorting
 from refresher import Refresher
 from mdblist import Mdblist
 from datetime import datetime
+from date_parser import inside_period
 
 ## Helpful URLS for dev:
 # https://swagger.emby.media/?staticview=true#/
@@ -101,6 +102,21 @@ def process_list(mdblist_list: dict):
     )
 
     collection_id = emby.get_collection_id(collection_name)
+    active_period_str = config_parser.get(
+        collection_name, "active_between", fallback=None
+    )
+
+    if active_period_str and collection_id:
+        if not inside_period(active_period_str):
+            all_items_in_collection = emby.get_items_in_collection(
+                collection_id, ["Id"]
+            )
+            item_ids = [item["Id"] for item in all_items_in_collection]
+            newly_removed += emby.delete_from_collection(collection_name, item_ids)
+            print(f"Collection {collection_name} is not active. Removed all items.")
+            print("=========================================")
+            return
+
     if collection_id is None:
         print(f"Collection {collection_name} does not exist. Will create it.")
         frequency = 100  # If collection doesn't exist, download every time
@@ -215,6 +231,7 @@ def process_list(mdblist_list: dict):
     newly_removed += emby.delete_from_collection(collection_name, remove_emby_ids)
 
     # Change sort name so that it shows up first.
+    # TODO If True previously and now False, it will not reset the sort name
     if update_collection_sort_name is True and items_added > 0:
         collection_sort_name = f"!{minutes_until_2100()} {collection_name}"
         emby.set_item_property(collection_id, "ForcedSortName", collection_sort_name)
