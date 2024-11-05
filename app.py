@@ -106,15 +106,20 @@ def process_list(mdblist_list: dict):
         collection_name, "active_between", fallback=None
     )
 
-    if active_period_str and collection_id:
+    if active_period_str:
         if not inside_period(active_period_str):
             all_items_in_collection = emby.get_items_in_collection(
                 collection_id, ["Id"]
             )
-            item_ids = [item["Id"] for item in all_items_in_collection]
+            item_ids = (
+                [item["Id"] for item in all_items_in_collection]
+                if all_items_in_collection is not None
+                else []
+            )
             newly_removed += emby.delete_from_collection(collection_name, item_ids)
-            print(f"Collection {collection_name} is not active. Removed all items.")
-            print("=========================================")
+            if newly_removed > 0:
+                print(f"Collection {collection_name} is not active. Removed all items.")
+                print("=========================================")
             return
 
     if collection_id is None:

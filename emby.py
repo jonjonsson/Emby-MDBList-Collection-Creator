@@ -201,6 +201,8 @@ class Emby:
             list: A list of dictionaries containing the structured items in the collection.
                 Each dictionary contains the specified fields for each item.
         """
+        if collection_id is None:
+            return None
         endpoint = f"/emby/users/{self.user_id}/items?Parentid={collection_id}"
         if fields:
             fields_str = ",".join(fields)

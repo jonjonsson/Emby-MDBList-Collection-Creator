@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.7
+# Emby MDBList Collection Creator 1.71
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
