@@ -265,6 +265,7 @@ class Emby:
         print(f"Successfully created collection {collection_name}")
         return response.json()["Id"]
 
+    # Not tested and not working for collections.
     def delete_item(self, item_id) -> bool:
         """
         Deletes an item from the Emby server.

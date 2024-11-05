@@ -3,3 +3,4 @@ __pycache__/
 backup/
 notes.txt
 .vscode/launch.json
+test.py

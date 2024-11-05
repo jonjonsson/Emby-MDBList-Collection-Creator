@@ -51,10 +51,18 @@ class Refresher:
 
             self.processed_items.append(item["Id"])
 
-            created_date = datetime.fromisoformat(
-                item["DateCreated"].replace("Z", "+00:00")
-            )
-            created_date = created_date.replace(tzinfo=None)
+            created_date = None
+            try:
+                created_date = datetime.fromisoformat(
+                    item["DateCreated"].replace("Z", "+00:00")
+                )
+                created_date = created_date.replace(tzinfo=None)
+            except Exception as e:
+                print(
+                    f"Error parsing DateCreated ({item['DateCreated']}) for {item['Id']}: {item['Name']}. Error: {e}"
+                )
+                continue
+
             premier_date = None
 
             if item["PremiereDate"] is None:
