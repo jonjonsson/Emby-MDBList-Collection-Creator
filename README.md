@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.71
+# Emby MDBList Collection Creator 1.72
 
 This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
 
@@ -25,20 +25,61 @@ In the `config.cfg` file, fill in the following details:
 
 Refer to the comments in `config.cfg` for additional information.
 
+If config_hidden.cfg exists it will be used instead. Just copy paste the contents of config.cfg into config_hidden.cfg and make your changes there. When updating the script, you can safely overwrite config.cfg without losing your settings.
+
 ### Running the Script
 
-Navigate to the project directory and execute the following commands:
+To run the script, follow these steps:
+
+1. **Open a Command Prompt or Terminal:**
+  - On Windows, press `Win + R`, type `cmd`, and press Enter.
+  - On macOS or Linux, open the Terminal application.
+
+2. **Navigate to the Project Directory:**
+  - Use the `cd` command to change to the directory where the script is located. For example:
+    ```bash
+    cd /path/to/Emby-MDBList-Collection-Creator
+    ```
+
+3. **Install Required Packages:**
+  - Ensure you have Python installed. You can download it from [python.org](https://www.python.org/).
+  - Install the required Python package by running:
+    ```bash
+    pip install requests
+    ```
+
+4. **Run the Script:**
+  - Execute the script by running:
+    ```bash
+    python app.py
+    ```
+
+If you encounter any issues, ensure you have followed each step correctly and have the necessary permissions.
+
+
+### Running the Script in Docker
+
+To run the script in a Docker container, follow these steps:
+
+1. Build the Docker image:
 
 ```bash
-pip install requests
-python app.py
+docker build -t emby-mdblist . --load
 ```
+
+2. Run the Docker container, passing in the config file via a volume mount:
+
+```bash
+docker run -v .\config_hidden.cfg:/app/config.cfg emby-mdblist
+```
+
+(Use `./config_hidden.cfg` if you are on a Unix-based system)
 
 ## Creating Emby Collections from MDBList Lists
 
 There are two methods to create Emby collections from MDBList lists:
 
-### 1. Add MDBList URLs or IDs to `config.cfg`
+### 1. Add MDBList URLs or IDs to `config.cfg` or `config_hidden.cfg` 
 
 * Refer to `config.cfg` for examples.
 * This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/).
@@ -50,9 +91,9 @@ By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com
 
 ## Sorting Shows and Movies by time added
 
-This feature that is off by default. Emby can not (yet) sort collections by time added to library. That means you can't sort collections to show what is newest first. This is kinda lame if you have a Trending Movies category and you can't see what's new at a glance. 
+This feature is off by default. Emby can not (yet) sort items inside collections by time added to library. That means you can't sort collections to show what is newest first. This is a shame if you have a Trending Movies collection for example and you can't see what's new at a glance. 
 
-To address this you can have this script update the sort names of items that are in collections. It updates item sort name in the metadata so that the sort name is appended with "!!![number_of_minutes_until_year_2100_from_the_date_time_added_to_emby]". That way the newest items show first in the default alphabetical order. This will affect the sorting of these items elsewhere as well which you may or may not care about, you can always turn it off and the old sort name will be restored on the next run of the script.
+To address this you can have this script update the sort names of items that are in collections. It updates item sort name in the metadata so that the sort name is appended with "!!![number_of_minutes_until_year_2100_from_the_date_time_added_to_emby]". That way the newest items show first when sorted in the default alphabetical order. This will affect the sorting of these items elsewhere as well which you may or may not care about, you can always turn it off later and the old sort name will be restored on the next run of the script.
 
 You can set this on by default for all collection in the config or set it per collection.
 
@@ -73,6 +114,20 @@ Run app_backup.py to save IsWatched and Favorites for all users to json files, t
 ### Restoring backup
 Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, see comments at top of app_restore_backup.py.
 
+## Frequently Asked Questions
+
+- **What happens if I rename my collection in Emby or this script?**
+  - A new collection will be created with the name you specify in the config file and the renamed collection will be ignored by the script. 
+  
+- **Does this affect my manually created collection?**
+  - This will only affect collections with the same name as specified in the config file.
+  
+- **Do I need a server to use this script?**
+  - No, you can run it on your Windows or Mac PC and just keep it open. The script refreshes the collections every n hours as specified in config.cfg.
+  
+- **Do the collections show for all Emby users?**
+  - Yes, the collections will be visible to all Emby users.
+
 ## Changelog
 
 ### Version 1.1
@@ -91,7 +146,7 @@ Optionally refresh metadata for newly added media. Added 2 scripts to backup IsW
 New preffered method of adding lists by using the mdblist URL instead of the older method of specifying the ID or list name + author. No config file update is required, old methods will still work. See config.cfg for more info.
 
 ### Version 1.6
-Added support for multiple MDBList urls for a single category.
+Added support for multiple MDBList urls for a single collection.
 
 ### Version 1.61 + 1.62
 Fix for item sort names not being updated unless collection existed prior. Additional error handling.
@@ -99,16 +154,5 @@ Fix for item sort names not being updated unless collection existed prior. Addit
 ### Version 1.7
 Added ability to have seasonal or temporary lists like for Halloween, Christmas, Oscars etc. Thanks to @cj0r for the idea. See example in config file. No breaking changes for any older version.
 
-## Frequently Asked Questions
-
-- **What happens if I rename my collection in Emby or this script?**
-  - A new collection will be created with the name you specify in `config.cfg`.
-  
-- **Does this affect my manually created collection?**
-  - This will only affect collections with the same name as specified in `config.cfg`.
-  
-- **Do I need a server to use this script?**
-  - No, you can run it on your PC and keep it open. The script refreshes the collections every n hours as specified in config.cfg.
-  
-- **Do the collections show for all Emby users?**
-  - Yes, the collections will be visible to all Emby users.
+### Version 1.71
+Added Docker support thanks to @neoKushan. Minor fix for seasonal lists.
