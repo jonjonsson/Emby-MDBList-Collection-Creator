@@ -15,6 +15,7 @@ from date_parser import inside_period
 # https://docs.mdblist.com/docs/api
 
 config_parser = configparser.ConfigParser()
+config_parser.optionxform = str.lower
 
 # Check if config_hidden.cfg exists, if so, use that, otherwise use config.cfg
 if config_parser.read("config_hidden.cfg") == []:
@@ -265,13 +266,13 @@ def process_hardcoded_lists():
             collections.append(
                 {
                     "name": section,
-                    "id": config_parser.get(section, "Id", fallback=None),
-                    "source": config_parser.get(section, "Source", fallback=""),
-                    "frequency": config_parser.get(section, "Frequency", fallback=100),
+                    "id": config_parser.get(section, "id", fallback=None),
+                    "source": config_parser.get(section, "source", fallback=""),
+                    "frequency": config_parser.get(section, "frequency", fallback=100),
                     "mdblist_name": config_parser.get(
-                        section, "List_Name", fallback=None
+                        section, "list_name", fallback=None
                     ),
-                    "user_name": config_parser.get(section, "User_Name", fallback=None),
+                    "user_name": config_parser.get(section, "user_name", fallback=None),
                     "update_items_sort_names": config_parser.getboolean(
                         section, "update_items_sort_names", fallback=False
                     ),
