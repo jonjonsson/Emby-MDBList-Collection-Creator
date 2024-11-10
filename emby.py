@@ -1,5 +1,13 @@
+import os
 import time
 import requests
+import base64
+
+## Helpful URLS for dev:
+# https://swagger.emby.media/?staticview=true#/
+# https://github.com/MediaBrowser/Emby/wiki
+# https://dev.emby.media/doc/restapi/Browsing-the-Library.html
+# https://docs.mdblist.com/docs/api
 
 
 class Emby:
@@ -447,6 +455,132 @@ class Emby:
             print(
                 f"Error marking item {item_id} as a favorite for user {user_id}: {response.content}"
             )
+            return False
+
+    def set_image(
+        self,
+        item_id,
+        image_path,
+        image_type="Primary",
+        provider_name="MDBList Collection Creator script",
+    ):
+        """
+        Can take local or remote path and set as image for item.
+
+        Args:
+            item_id (str): The ID of the item.
+            image_path (str): The path to the image. Either local or remote.
+            image_type (str): The type of the image. Defaults to "Primary".
+            provider_name (str): The name of the image provider. Defaults to "MDBList Collection Creator script".
+
+        Returns:
+            bool: True if the image is uploaded successfully, False otherwise.
+        """
+        if image_path.startswith("http"):
+            return self.__set_remote_image(
+                item_id, image_path, image_type, provider_name
+            )
+        else:
+            return self.__upload_image(item_id, image_path, image_type)
+
+    def __set_remote_image(
+        self,
+        item_id,
+        image_url,
+        image_type="Primary",
+        provider_name="MDBList Collection Creator script",
+    ):
+        """
+        Downloads a remote image for an item.
+
+        Args:
+            item_id (str): The ID of the item.
+            image_url (str): The URL of the image to download.
+            image_type (str): The type of the image. Defaults to "Primary".
+            provider_name (str): The name of the image provider. Defaults to "MDBList Collection Creator script".
+
+        Returns:
+            bool: True if the image is downloaded successfully, False otherwise.
+        """
+        endpoint = f"/emby/Items/{item_id}/RemoteImages/Download"
+        url = self.server_url + endpoint
+
+        params = {
+            "Type": image_type,
+            "ProviderName": provider_name,
+            "ImageUrl": image_url,
+        }
+
+        try:
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=params,
+            )
+
+            if response.status_code == 204:
+                return True
+            else:
+                print(f"Error setting image for item {item_id}, response: {response}")
+                return False
+
+        except Exception as e:
+            print(f"Exception occurred while downloading image: {str(e)}")
+            return False
+
+    def __upload_image(self, item_id, image_path, image_type="Primary"):
+        """
+        Uploads a poster image to a collection. Allows for .jpg, .jpeg, .png, and .tbn formats.
+
+        Args:
+            item_id (str): The ID of the item.
+            image_path (str): The path to the image to upload.
+            image_type (str): The type of the image. Defaults to "Primary".
+
+        Returns:
+            bool: True if the image is uploaded successfully, False otherwise.
+        """
+
+        if not os.path.exists(image_path):
+            print(f"Error: Image file not found: {image_path}")
+            return False
+
+        allowed_types = [".jpg", ".jpeg", ".png", ".tbn"]
+        if not any(image_path.lower().endswith(ext) for ext in allowed_types):
+            print(
+                f"Unsupported image format. Must be one of: {', '.join(allowed_types)}"
+            )
+            return False
+
+        try:
+            with open(image_path, "rb") as f:
+                image_data = f.read()
+
+            image_data_base64 = base64.b64encode(image_data)
+
+            endpoint = (
+                f"/emby/Items/{item_id}/Images/{image_type}?api_key={self.api_key}"
+            )
+            url = self.server_url + endpoint
+            headers = {
+                "Content-Type": "image/jpeg",
+                "X-Emby-Token": self.api_key,
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                data=image_data_base64,
+            )
+
+            if response.status_code == 204:
+                return True
+            else:
+                print(f"Error uploading image for item {item_id}, response: {response}")
+                return False
+
+        except Exception as e:
+            print(f"Exception occurred while uploading image: {str(e)}")
             return False
 
     def __update_item(self, item_id, data):

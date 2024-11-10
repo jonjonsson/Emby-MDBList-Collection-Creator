@@ -1,6 +1,14 @@
-# Emby MDBList Collection Creator 1.72
+# Emby MDBList Collection Creator 1.8
 
-This Python script allows you to take lists from MDBList.com and transform them into collections in Emby. MDBList is a platform that stores lists from Trakt, IMDB, and more, which can be accessed through an API. There is also a refresh metadata functionality that helps keep ratings up to date for newly released items.
+This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB)
+
+## Features
+
+* List Conversion: Transform MDBList lists into Emby collections
+* Metadata Refresh: Keep ratings up-to-date for newly released content
+* Collection Images: Upload both local and remote images for collections
+* Seasonal collections: Specify when a collections should be visible 
+* Backup & Restore: Additional utilities to backup and restore watch history and favorites
 
 ## Prerequisites:
 
@@ -79,10 +87,10 @@ docker run -v .\config_hidden.cfg:/app/config.cfg emby-mdblist
 
 There are two methods to create Emby collections from MDBList lists:
 
-### 1. Add MDBList URLs or IDs to `config.cfg` or `config_hidden.cfg` 
+### 1. Add MDBList URLs to `config.cfg` or `config_hidden.cfg` 
 
 * Refer to `config.cfg` for examples.
-* This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/).
+* This method allows you to create collections from other users' lists, found at [MDBList Top Lists](https://mdblist.com/toplists/) for example.
 * The `config.cfg` file contains examples. Use these as a guide to add more lists. 
 
 ### 2. Automatically Download Your Lists from MDBList
@@ -104,6 +112,9 @@ Helps to keep the ratings of newly released movies and shows up to date until th
 
 ## Seasonal lists
 You can specify a period of the year to show a collection for. For example only show a collection during Christmas every year. You can also specify an end date so a collection does not show again after a specific date, useful for something like this years Oscars collection that you don't want to be hanging about forever. See example in config file.
+
+## Collection posters
+Specify the image to use as a collection poster, either a local image or an image url. See examples in config.cfg.
 
 ## Backing up IsWatched and Favorites
 Kind of a bolted on functionality since it's unrelated to the main function of the script, but I needed it so I added it.
@@ -156,3 +167,6 @@ Added ability to have seasonal or temporary lists like for Halloween, Christmas,
 
 ### Version 1.71
 Added Docker support thanks to @neoKushan. Minor fix for seasonal lists.
+
+### Version 1.8
+Added ability to set collection posters.

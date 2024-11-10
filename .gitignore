@@ -4,3 +4,4 @@ backup/
 notes.txt
 .vscode/launch.json
 test.py
+temp/

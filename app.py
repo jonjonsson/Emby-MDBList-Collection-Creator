@@ -7,12 +7,7 @@ from refresher import Refresher
 from mdblist import Mdblist
 from datetime import datetime
 from date_parser import inside_period
-
-## Helpful URLS for dev:
-# https://swagger.emby.media/?staticview=true#/
-# https://github.com/MediaBrowser/Emby/wiki
-# https://dev.emby.media/doc/restapi/Browsing-the-Library.html
-# https://docs.mdblist.com/docs/api
+from db import Db
 
 config_parser = configparser.ConfigParser()
 config_parser.optionxform = str.lower
@@ -60,6 +55,7 @@ emby = Emby(emby_server_url, emby_user_id, emby_api_key)
 mdblist = Mdblist(mdblist_api_key)
 item_sorting = ItemSorting(emby)
 refresher = Refresher(emby)
+db_manager = Db()
 
 
 def find_missing_entries_in_list(list_to_check, list_to_find):
@@ -96,6 +92,7 @@ def process_list(mdblist_list: dict):
     frequency = int(mdblist_list.get("frequency", 100))
     list_id = mdblist_list.get("id", None)
     source = mdblist_list.get("source", None)
+    poster = mdblist_list.get("poster", None)
     mdblist_name = mdblist_list.get("mdblist_name", None)
     user_name = mdblist_list.get("user_name", None)
     update_collection_items_sort_names = mdblist_list.get(
@@ -236,6 +233,8 @@ def process_list(mdblist_list: dict):
     newly_added += items_added
     newly_removed += emby.delete_from_collection(collection_name, remove_emby_ids)
 
+    set_poster(collection_id, collection_name, poster)
+
     # Change sort name so that it shows up first.
     # TODO If True previously and now False, it will not reset the sort name
     if update_collection_sort_name is True and items_added > 0:
@@ -268,6 +267,7 @@ def process_hardcoded_lists():
                     "name": section,
                     "id": config_parser.get(section, "id", fallback=None),
                     "source": config_parser.get(section, "source", fallback=""),
+                    "poster": config_parser.get(section, "poster", fallback=None),
                     "frequency": config_parser.get(section, "frequency", fallback=100),
                     "mdblist_name": config_parser.get(
                         section, "list_name", fallback=None
@@ -283,6 +283,34 @@ def process_hardcoded_lists():
 
     for mdblist_list in collections:
         process_list(mdblist_list)
+
+
+def set_poster(collection_id, collection_name, poster_path=None):
+    """
+    Sets the poster for a collection. Will not upload if temp config file
+    shows that it been uploaded before.
+
+    Args:
+        collection_id (str): The ID of the collection.
+        collection_name (str): The name of the collection. Only used for logging.
+        poster_path (str): The path or URL to the new poster image.
+
+    Returns:
+        None
+    """
+
+    if poster_path is None:
+        return
+
+    if poster_path == db_manager.get_config_for_section(collection_id, "poster_path"):
+        print(f"Poster for {collection_name} is already set to the specified path.")
+        return
+
+    if emby.set_image(collection_id, poster_path):
+        db_manager.set_config_for_section(collection_id, "poster_path", poster_path)
+        print(f"Poster for {collection_name} has been set successfully.")
+    else:
+        print(f"Failed to set poster for {collection_name}.")
 
 
 def main():
