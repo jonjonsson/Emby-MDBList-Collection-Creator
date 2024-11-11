@@ -67,7 +67,30 @@ If you encounter any issues, ensure you have followed each step correctly and ha
 
 ### Running the Script in Docker
 
-To run the script in a Docker container, follow these steps:
+To run the script in a Docker container, you will need to mount a configuration file to `/app/config.cfg` but that's it - no ports need exposing.
+
+An example docker run command:
+
+```bash
+docker run -v /path/to/config.cfg:/app/config.cfg ghcr.io/jonjonsson/emby-mdblist-collection-creator
+```
+
+Or use this example compose file:
+
+```yml
+version: '3.8'
+
+services:
+    emby-mdblist-collection-creator:
+        image: ghcr.io/jonjonsson/emby-mdblist-collection-creator:latest
+        volumes:
+            - /path/to/config.cfg:/app/config.cfg
+```
+
+
+### Building the docker image manually
+
+It's not necessary to build the image yourself, but should you choose to, you need these two commands:
 
 1. Build the Docker image:
 
