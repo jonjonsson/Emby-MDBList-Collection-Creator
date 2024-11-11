@@ -34,7 +34,7 @@ Json file exmple:
     etc
 """
 
-from emby import Emby
+from src.emby import Emby
 import ast
 import sys
 from argparse import ArgumentParser

@@ -1,13 +1,14 @@
 import random
 import time
 import configparser
-from emby import Emby
-from item_sorting import ItemSorting
-from refresher import Refresher
-from mdblist import Mdblist
-from datetime import datetime
-from date_parser import inside_period
-from db import Db
+from src.emby import Emby
+from src.item_sorting import ItemSorting
+from src.refresher import Refresher
+from src.mdblist import Mdblist
+from src.date_parser import inside_period
+from src.db import Db
+from src.utils import find_missing_entries_in_list
+from src.utils import minutes_until_2100
 
 config_parser = configparser.ConfigParser()
 config_parser.optionxform = str.lower
@@ -29,11 +30,9 @@ download_my_mdblist_lists_automatically = config_parser.getboolean(
 update_collection_sort_name = config_parser.getboolean(
     "admin", "update_collection_sort_name", fallback=True
 )
-
 update_items_sort_names_default_value = config_parser.getboolean(
     "admin", "update_items_sort_names_default_value", fallback=False
 )
-
 refresh_items = config_parser.getboolean(
     "admin", "refresh_items_in_collections", fallback=False
 )
@@ -43,7 +42,6 @@ refresh_items_max_days_since_added = config_parser.getint(
 refresh_items_max_days_since_premiered = config_parser.getint(
     "admin", "refresh_items_in_collections_max_days_since_premiered", fallback=30
 )
-
 hours_between_refresh = config_parser.getint("admin", "hours_between_refresh")
 
 newly_added = 0
@@ -56,33 +54,6 @@ mdblist = Mdblist(mdblist_api_key)
 item_sorting = ItemSorting(emby)
 refresher = Refresher(emby)
 db_manager = Db()
-
-
-def find_missing_entries_in_list(list_to_check, list_to_find):
-    """
-    Finds the missing entries in a list.
-
-    Args:
-        list_to_check (list): The list to check against.
-        list_to_find (list): The list to find missing entries in.
-
-    Returns:
-        list: A list of missing entries found in list_to_find.
-    """
-    return [item for item in list_to_find if item not in list_to_check]
-
-
-def minutes_until_2100():
-    """
-    Used for sorting collection so that the newest show up first in Emby.
-    Returns:
-        int: The number of minutes remaining until the year 2100.
-    """
-    today = datetime.now()
-    year_2100 = datetime(2100, 1, 1)
-    delta = year_2100 - today
-    minutes = delta.days * 24 * 60 + delta.seconds // 60
-    return minutes
 
 
 def process_list(mdblist_list: dict):
@@ -139,9 +110,7 @@ def process_list(mdblist_list: dict):
     elif mdblist_name is not None and user_name is not None:
         found_list_id = mdblist.find_list_id_by_name_and_user(mdblist_name, user_name)
         if found_list_id is None:
-            print(
-                f"ERROR! Could not find list {mdblist_name} by user {user_name}. Will not process this list."
-            )
+            print(f"ERROR! List {mdblist_name} by {user_name} not found. Skipping.")
             print("=========================================")
             return
         mdblist_imdb_ids, mdblist_mediatypes = mdblist.get_list(found_list_id)
@@ -155,16 +124,12 @@ def process_list(mdblist_list: dict):
             mdblist_imdb_ids.extend(imdb_ids)
             mdblist_mediatypes.extend(mediatypes)
     else:
-        print(
-            f"ERROR! Must provide either list_id or both list_name and user_name for mdblist {collection_name}. Will not process this list."
-        )
+        print(f"ERROR! Must provide either id or source for {collection_name}.")
         print("=========================================")
         return
 
     if mdblist_imdb_ids is None:
-        print(
-            f"ERROR! No items in mdblist {collection_name}. Will not process this list."
-        )
+        print(f"ERROR! No items in {collection_name}. Will not process this list.")
         print("=========================================")
         return
 
@@ -207,20 +172,15 @@ def process_list(mdblist_list: dict):
     add_emby_ids = emby.get_items_with_imdb_id(missing_imdb_ids, mdblist_mediatypes)
 
     print()
-    print(
-        f"Added {len(add_emby_ids)} new items to Collection and removed {len(remove_emby_ids)}"
-    )
+    print(f"Added {len(add_emby_ids)} new items and removed {len(remove_emby_ids)}")
 
     if collection_id is None:
         if len(add_emby_ids) == 0:
-            print(
-                f"ERROR! No items to put in mdblist {collection_name}. Will not process."
-            )
+            print(f"ERROR! No items to put in mdblist {collection_name}.")
             print("=========================================")
             return
-        collection_id = emby.create_collection(
-            collection_name, [add_emby_ids[0]]
-        )  # Create the collection with the first item since you have to create with an item
+        # Create the collection with the first item since you have to create with an item
+        collection_id = emby.create_collection(collection_name, [add_emby_ids[0]])
         add_emby_ids.pop(0)
 
     if collection_id not in all_collections_ids:
@@ -256,7 +216,6 @@ def process_my_lists_on_mdblist():
 
 
 def process_hardcoded_lists():
-    # Get all section from config file that are not "admin" and add to mdblist_lists
     collections = []
     for section in config_parser.sections():
         if section == "admin":

@@ -1,13 +1,14 @@
 # Emby MDBList Collection Creator 1.8
 
-This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB)
+This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB.
 
 ## Features
 
 * List Conversion: Transform MDBList lists into Emby collections
 * Metadata Refresh: Keep ratings up-to-date for newly released content
-* Collection Images: Upload both local and remote images for collections
-* Seasonal collections: Specify when a collections should be visible 
+* Collection Images: Upload local or remote images for collections posters
+* Seasonal Collections: Specify when a collections should be visible
+* Collection Ordering: Show your collections in order of which one was update
 * Backup & Restore: Additional utilities to backup and restore watch history and favorites
 
 ## Prerequisites:

@@ -5,7 +5,7 @@ You can use this if you don't have access to the Emby database but you do have a
 
 import configparser
 import json
-from emby import Emby
+from src.emby import Emby
 import os
 
 directory = "backup"
