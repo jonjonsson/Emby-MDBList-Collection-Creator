@@ -559,7 +559,7 @@ class Emby:
             image_data_base64 = base64.b64encode(image_data)
 
             endpoint = (
-                f"/emby/Items/{item_id}/Images/{image_type}?api_key={self.api_key}"
+                f"emby/Items/{item_id}/Images/{image_type}?api_key={self.api_key}"
             )
             url = self.server_url + endpoint
             headers = {
