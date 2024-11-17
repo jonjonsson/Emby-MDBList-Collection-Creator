@@ -1,6 +1,7 @@
 import random
 import time
 import configparser
+import requests
 from src.emby import Emby
 from src.item_sorting import ItemSorting
 from src.refresher import Refresher
@@ -286,12 +287,36 @@ def main():
 
     # Test getting a list via url
     # mdblist_list = mdblist.get_list_using_url(
-    #    "https://mdblist.com/lists/amything/external/26503/"
+    #    "https://mdblist.com/lists/amything/best-documentaries"
     # )
     # print(mdblist_list)
     # return
 
+    # Test getting all Emby collections
+    # print(emby.get_all_collections(False))
+    # return
+
     while True:
+
+        try:
+            response = requests.get("http://www.google.com/", timeout=5)
+        except requests.RequestException:
+            print("No internet connection. Check your connection. Retrying in 5 min...")
+            time.sleep(300)
+            continue
+
+        emby_info = emby.get_system_info()
+        if emby_info is False:
+            print("Error connecting to Emby. Retrying in 5 min...")
+            time.sleep(300)
+            continue
+
+        mdblist_user_info = mdblist.get_user_info()
+        if mdblist_user_info is False:
+            print("Error connecting to MDBList. Retrying in 5 min...")
+            time.sleep(300)
+            continue
+
         if download_manually_added_lists:
             process_hardcoded_lists()
 

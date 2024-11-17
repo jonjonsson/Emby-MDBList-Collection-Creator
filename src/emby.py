@@ -2,6 +2,7 @@ import os
 import time
 import requests
 import base64
+from urllib.parse import quote
 
 ## Helpful URLS for dev:
 # https://swagger.emby.media/?staticview=true#/
@@ -33,7 +34,7 @@ class Emby:
             print(
                 f"Error occurred while getting Emby system info, check your configuration. Check your Emby url and port, user ID and API key: {e}"
             )
-            raise SystemExit
+            return False
 
     def get_users(self):
         user_list_endpoint = "/emby/Users"
@@ -263,7 +264,7 @@ class Emby:
             return None
 
         response = requests.post(
-            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={collection_name}&Ids={self.__ids_to_str(item_ids)}"
+            f"{self.server_url}/Collections?api_key={self.api_key}&IsLocked=true&Name={quote(collection_name)}&Ids={self.__ids_to_str(item_ids)}"
         )
 
         if response.status_code != 200:

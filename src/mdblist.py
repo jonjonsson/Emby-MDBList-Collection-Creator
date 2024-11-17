@@ -1,3 +1,4 @@
+from urllib.parse import quote
 import requests
 
 
@@ -8,7 +9,7 @@ class Mdblist:
         self.user_info_url = "https://mdblist.com/api/user/?apikey=" + api_key
         self.my_lists_url = "https://mdblist.com/api/lists/user/?apikey=" + api_key
         self.search_lists_url = (
-            "https://mdblist.com/api/lists/search?s={list_name}&apikey=" + api_key
+            "https://api.mdblist.com/lists/search?query={query}&apikey=" + api_key
         )
         self.get_lists_of_user_url = (
             "https://mdblist.com/api/lists/user/{id}/?apikey=" + api_key
@@ -16,11 +17,19 @@ class Mdblist:
         self.items_url = (
             "https://mdblist.com/api/lists/{list_id}/items/?apikey=" + api_key
         )
+        self.top_lists_url = "https://api.mdblist.com/lists/top?apikey=" + api_key
+        self.get_list_by_name_url = (
+            "https://api.mdblist.com/lists/{username}/{listname}?apikey=" + api_key
+        )
 
     def get_user_info(self):
-        response = requests.get(self.user_info_url)
-        user_info = response.json()
-        return user_info
+        try:
+            response = requests.get(self.user_info_url)
+            user_info = response.json()
+            return user_info
+        except Exception as e:
+            print(f"Error getting MDBList user info: {e}")
+            return False
 
     # Take the json encoded list and return the mediatypes as a list
     def check_list_mediatype(self, list) -> list:
@@ -110,8 +119,7 @@ class Mdblist:
             },
         ]
         """
-        list_name = list_name.replace(" ", "%20")
-        url = self.search_lists_url.format(list_name=list_name)
+        url = self.search_lists_url.format(list_name=quote(list_name))
         response = requests.get(url)
         lists = response.json()
         return lists
@@ -157,3 +165,112 @@ class Mdblist:
         response = requests.get(url)
         lists = response.json()
         return lists
+
+    def get_top_lists(self):
+        """
+        Get Top Lists
+        Returns list of Top Lists
+
+        GET https://api.mdblist.com/lists/top?apikey=abc123
+        apikey: Your API key
+        Response
+        [
+            {
+                "id": 2194,
+                "user_id": 1230,
+                "user_name": "garycrawfordgc",
+                "name": "Latest TV Shows",
+                "slug": "latest-tv-shows",
+                "description": "",
+                "mediatype": "show",
+                "items": 300,
+                "likes": 477
+            },
+            ...
+        ]
+        """
+        response = requests.get(self.top_lists_url)
+        top_lists = response.json()
+        return top_lists
+
+    def search_list(self, query):
+        """
+        Search Lists
+        Returns list of Lists matching the query
+
+        GET https://api.mdblist.com/lists/search?query=Horror&apikey=abc123
+        query: Search query
+        apikey: Your API key
+        Response
+        [
+            {
+                "id": 2410,
+                "user_id": 894,
+                "user_name": "hdlists",
+                "name": "Horror Movies (Top Rated From 1960 to Today)",
+                "slug": "latest-hd-horror-movies-top-rated-from-1980-to-today",
+                "description": "",
+                "mediatype": "movie",
+                "items": 920,
+                "likes": 139
+            },
+            ...
+        ]
+        """
+        url = self.search_lists_url.format(query=quote(query))
+        response = requests.get(url)
+        search_results = response.json()
+        return search_results
+
+    def get_list_by_name(self, username, listname):
+        """
+        Get List by Name
+        Returns list details matching the username and listname
+
+        GET https://api.mdblist.com/lists/{username}/{listname}?apikey=abc123
+        username: The username associated with the list
+        listname: The slug of the list
+        apikey: Your API key
+        Response
+        [
+            {
+                "id": 1176,
+                "user_id": 3,
+                "user_name": "linaspurinis",
+                "name": "Latest Certified Fresh Releases",
+                "slug": "latest-certified-fresh-releases",
+                "description": "Score >= 60\r\nLimit 30",
+                "mediatype": "movie",
+                "items": 30,
+                "likes": 21,
+                "dynamic": true,
+                "private": false
+            },
+            ...
+        ]
+        """
+        url = self.get_list_by_name_url.format(username=username, listname=listname)
+        response = requests.get(url)
+        list_details = response.json()
+        return list_details
+
+    def get_list_info_by_url(self, url):
+        """
+        Take an MDBList public URL and return list info.
+
+        Example:
+        URL: https://mdblist.com/lists/khoegh93/danish-spoken-2011-2020
+        This function extracts the username and list name from the URL and uses them
+        to retrieve the list info via the get_list_by_name method.
+
+        Args:
+        url (str): The MDBList public URL.
+
+        Returns:
+        dict: The list information retrieved by get_list_by_name.
+        """
+        url = url.replace("https://mdblist.com/lists/", "")
+        parts = url.split("/")
+        username = parts[0]
+        listname = parts[1]
+        return self.get_list_by_name(username, listname)
