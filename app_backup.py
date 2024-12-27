@@ -57,6 +57,11 @@ def get_all_items(user_id, filter):
 def main():
     all_users = emby.get_users()
 
+    backup_user_names = config_parser.get("admin", "backup_user_names", fallback=None)
+    if backup_user_names is not None:
+        backup_user_names = backup_user_names.split(",")
+        all_users = [user for user in all_users if user["Name"] in backup_user_names]
+
     if not os.path.exists(directory):
         os.makedirs(directory)
 
