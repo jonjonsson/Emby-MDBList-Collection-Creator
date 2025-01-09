@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.8
+# Emby MDBList Collection Creator 1.81
 
 This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB.
 
@@ -15,7 +15,7 @@ This tool allows you to convert lists from MDBList.com into collections within y
 
 To use this script, you need:
 
-* Python installed on your system
+* At minimum Python 3.11 installed on your system
 * "Requests" Python package (install with `pip install requests`)
 * Admin privileges on Emby
 * A user account on [MDBList](https://mdblist.com/)
@@ -194,3 +194,6 @@ Added Docker support thanks to @neoKushan. Minor fix for seasonal lists.
 
 ### Version 1.8
 Added ability to set collection posters.
+
+### Version 1.81
+Can set custom sort name for a collection. Use "collection_sort_name" in config.

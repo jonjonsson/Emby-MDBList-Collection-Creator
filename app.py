@@ -70,6 +70,7 @@ def process_list(mdblist_list: dict):
     update_collection_items_sort_names = mdblist_list.get(
         "update_items_sort_names", update_items_sort_names_default_value
     )
+    collection_sort_name = mdblist_list.get("collection_sort_name", None)
 
     collection_id = emby.get_collection_id(collection_name)
     active_period_str = config_parser.get(
@@ -196,9 +197,16 @@ def process_list(mdblist_list: dict):
 
     set_poster(collection_id, collection_name, poster)
 
+    if collection_sort_name is not None:
+        emby.set_item_property(collection_id, "ForcedSortName", collection_sort_name)
+
     # Change sort name so that it shows up first.
     # TODO If True previously and now False, it will not reset the sort name
-    if update_collection_sort_name is True and items_added > 0:
+    elif (
+        update_collection_sort_name is True
+        and collection_sort_name is None
+        and items_added > 0
+    ):
         collection_sort_name = f"!{minutes_until_2100()} {collection_name}"
         emby.set_item_property(collection_id, "ForcedSortName", collection_sort_name)
         print(f"Updated sort name for {collection_name} to {collection_sort_name}")
@@ -235,6 +243,9 @@ def process_hardcoded_lists():
                     "user_name": config_parser.get(section, "user_name", fallback=None),
                     "update_items_sort_names": config_parser.getboolean(
                         section, "update_items_sort_names", fallback=False
+                    ),
+                    "collection_sort_name": config_parser.get(
+                        section, "collection_sort_name", fallback=None
                     ),
                 }
             )
