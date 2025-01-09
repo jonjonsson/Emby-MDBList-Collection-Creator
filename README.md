@@ -1,4 +1,4 @@
-# Emby MDBList Collection Creator 1.81
+# Emby MDBList Collection Creator 1.82
 
 This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB.
 
@@ -9,6 +9,7 @@ This tool allows you to convert lists from MDBList.com into collections within y
 * Collection Images: Upload local or remote images for collections posters
 * Seasonal Collections: Specify when a collections should be visible
 * Collection Ordering: Show your collections in order of which one was update
+* Collection Description: Add description from MDBList or create your own
 * Backup & Restore: Additional utilities to backup and restore watch history and favorites
 
 ## Prerequisites:
@@ -197,3 +198,8 @@ Added ability to set collection posters.
 
 ### Version 1.81
 Can set custom sort name for a collection. Use "collection_sort_name" in config.
+
+### Version 1.82
+Optionally set "use_mdblist_collection_description = True" to grab the descriptions from MDBList. Applies to all collections.
+Optionally set "description" for each collection to set your own custom description. Will overwrite MDBList description if set.
+See examples in config.cfg. 

@@ -15,7 +15,7 @@ config_parser = configparser.ConfigParser()
 config_parser.optionxform = str.lower
 
 # Check if config_hidden.cfg exists, if so, use that, otherwise use config.cfg
-if config_parser.read("config_hidden.cfg") == []:
+if config_parser.read("config_hidden.cfg", encoding="utf-8") == []:
     config_parser.read("config.cfg")
 
 emby_server_url = config_parser.get("admin", "emby_server_url")
@@ -43,6 +43,10 @@ refresh_items_max_days_since_added = config_parser.getint(
 refresh_items_max_days_since_premiered = config_parser.getint(
     "admin", "refresh_items_in_collections_max_days_since_premiered", fallback=30
 )
+use_mdblist_collection_description = config_parser.getboolean(
+    "admin", "use_mdblist_collection_description", fallback=False
+)
+
 hours_between_refresh = config_parser.getint("admin", "hours_between_refresh")
 
 newly_added = 0
@@ -71,6 +75,8 @@ def process_list(mdblist_list: dict):
         "update_items_sort_names", update_items_sort_names_default_value
     )
     collection_sort_name = mdblist_list.get("collection_sort_name", None)
+    description = mdblist_list.get("description", None)  # Description from mdblist
+    overwrite_description = mdblist_list.get("overwrite_description", None)  # From cfg
 
     collection_id = emby.get_collection_id(collection_name)
     active_period_str = config_parser.get(
@@ -211,6 +217,15 @@ def process_list(mdblist_list: dict):
         emby.set_item_property(collection_id, "ForcedSortName", collection_sort_name)
         print(f"Updated sort name for {collection_name} to {collection_sort_name}")
 
+    if (
+        use_mdblist_collection_description is True
+        and bool(description)
+        and overwrite_description is None
+    ):
+        emby.set_item_property(collection_id, "Overview", description)
+    elif overwrite_description is not None:
+        emby.set_item_property(collection_id, "Overview", overwrite_description)
+
     print("=========================================")
 
 
@@ -246,6 +261,9 @@ def process_hardcoded_lists():
                     ),
                     "collection_sort_name": config_parser.get(
                         section, "collection_sort_name", fallback=None
+                    ),
+                    "overwrite_description": config_parser.get(
+                        section, "description", fallback=None
                     ),
                 }
             )
