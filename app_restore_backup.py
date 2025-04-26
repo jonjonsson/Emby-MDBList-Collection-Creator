@@ -13,7 +13,7 @@ Execute the script from the command line with the required arguments:
 You can use this if you don't have access to the Emby database but you do have access to the API.
 Example command: 
     
-    python3 restore_backup.py -host http://xxx.xxx.xxx.xxx:xxxx -user_id abc123 -api_key abc123 -source_file "backup\IsPlayed_SomeUsername.json"
+    python3 app_restore_backup.py -host http://xxx.xxx.xxx.xxx:xxxx -user_id abc123 -api_key abc123 -source_file "backup\IsPlayed_SomeUsername.json"
 
 Json file exmple:
     {

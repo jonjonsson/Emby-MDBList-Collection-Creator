@@ -6,20 +6,23 @@ class Mdblist:
 
     def __init__(self, api_key):
         self.api_key = api_key
-        self.user_info_url = "https://mdblist.com/api/user/?apikey=" + api_key
-        self.my_lists_url = "https://mdblist.com/api/lists/user/?apikey=" + api_key
+        self.user_info_url = "https://api.mdblist.com/user/?apikey=" + api_key
+        self.my_lists_url = "https://api.mdblist.com/lists/user/?apikey=" + api_key
         self.search_lists_url = (
             "https://api.mdblist.com/lists/search?query={query}&apikey=" + api_key
         )
         self.get_lists_of_user_url = (
-            "https://mdblist.com/api/lists/user/{id}/?apikey=" + api_key
+            "https://api.mdblist.com/lists/user/{id}/?apikey=" + api_key
         )
         self.items_url = (
-            "https://mdblist.com/api/lists/{list_id}/items/?apikey=" + api_key
+            "https://api.mdblist.com/lists/{list_id}/items/?apikey=" + api_key
         )
         self.top_lists_url = "https://api.mdblist.com/lists/top?apikey=" + api_key
         self.get_list_by_name_url = (
             "https://api.mdblist.com/lists/{username}/{listname}?apikey=" + api_key
+        )
+        self.get_list_by_id_url = (
+            "https://api.mdblist.com/lists/{list_id}?apikey=" + api_key
         )
 
     def get_user_info(self):
@@ -39,22 +42,70 @@ class Mdblist:
                 mediatypes.append(item["mediatype"])
         return mediatypes
 
-    def get_list(self, list_id):
+    def get_list(self, list_id, filter_imdb_ids=True, append_to_response=[]):
+        """
+        Retrieves a list of items from a specified list ID and optionally filters by IMDb IDs.
+
+        Args:
+            list_id (str): The ID of the list to retrieve.
+            filter_imdb_ids (bool, optional): If True, filters the list to only include IMDb IDs. Defaults to True.
+            append_to_response (list, optional): Additional parameters to append to the response URL. Defaults to an empty list.
+
+        Returns:
+            tuple: A tuple containing:
+                - list or None: A list of IMDb IDs if filter_imdb_ids is True, otherwise the full list of items.
+                - str or None: The media type of the list items, or None if an error occurs.
+        """
         url = self.items_url.format(list_id=list_id)
+        append_to_response = "%2C".join(append_to_response)
+        if append_to_response:
+            url = f"{url}&append_to_response={append_to_response}"
         response = requests.get(url)
         if response.text:
-            list = None
+            result = None
             try:
-                list = response.json()
+                result = response.json()
+                """ 
+                # Example response
+                {
+                    "movies": [
+                        {
+                        "id": 917496,
+                        "rank": 1,
+                        "adult": 0,
+                        "title": "Beetlejuice Beetlejuice",
+                        "imdb_id": "tt2049403",
+                        "tvdb_id": null,
+                        "language": "en",
+                        "mediatype": "movie",
+                        "release_year": 2024,
+                        "spoken_language": "en"
+                        }
+                    ],
+                    "shows": []
+                    }
+                """
+                # To be compatible with old api and when using /json to get lists, I'm merging movies and shows into one list
+                result = result["movies"] + result["shows"]
             except Exception:
                 print(f"Error! Cannot decode json, make sure URL is valid: {url}")
                 return None, None
-            imdb_ids = [item["imdb_id"] for item in list]
+            if filter_imdb_ids is False:
+                return result, self.check_list_mediatype(result)
+
+            imdb_ids = []
+            for item in result:
+                if "imdb_id" in item:
+                    imdb_id = item["imdb_id"]
+                    imdb_ids.append(imdb_id)
+                else:
+                    print(f"Warning: Could not find imdb_id in item {item}.")
+
             if len(imdb_ids) == 0:
                 print(
                     f"ERROR! Cannot find any items in list id {list_id} with api url {url} and public url https://mdblist.com/?list={list_id}."
                 )
-            return imdb_ids, self.check_list_mediatype(list)
+            return imdb_ids, self.check_list_mediatype(result)
         else:
             print(f"No response received from {url}")
             return None, None
@@ -73,9 +124,9 @@ class Mdblist:
 
         response = requests.get(url)
         if response.text:
-            list = response.json()
+            lst = response.json()
             imdb_ids = []
-            for item in list:
+            for item in lst:
                 if "imdb_id" in item:
                     imdb_ids.append(item["imdb_id"])
                 else:
@@ -84,7 +135,7 @@ class Mdblist:
                 print(
                     f"ERROR! Cannot find any items in list with api url {url} and public url {url.replace('/json','')}."
                 )
-            return imdb_ids, self.check_list_mediatype(list)
+            return imdb_ids, self.check_list_mediatype(lst)
         else:
             print(f"No response received from {url}")
             return None, None
@@ -93,8 +144,8 @@ class Mdblist:
         # Example return
         # [{"id": 45811, "name": "Trending Movies", "slug": "trending-movies", "items": 20, "likes": null, "dynamic": true, "private": false, "mediatype": "movie", "description": ""}]
         response = requests.get(self.my_lists_url)
-        list = response.json()
-        return list
+        lst = response.json()
+        return lst
 
     def find_list_id_by_name(self, list_name):
         """
@@ -125,9 +176,7 @@ class Mdblist:
         return lists
 
     def __filter_lists_by_user_name(lists, user_name):
-        return [
-            list for list in lists if list["user_name"].lower() == user_name.lower()
-        ]
+        return [lst for lst in lists if lst["user_name"].lower() == user_name.lower()]
 
     def find_list_id_by_name_and_user(self, list_name, user_name):
         lists = self.find_list_id_by_name(list_name)
@@ -254,6 +303,50 @@ class Mdblist:
         list_details = response.json()
         return list_details
 
+    def get_list_info_by_id(self, list_id):
+        """
+        Get List Info by ID
+        Returns list details matching the list ID
+
+        GET https://api.mdblist.com/lists/{listid}?apikey=abc123
+        listid: The ID of the list
+        apikey: Your API key
+        Response
+        [
+            {
+                "id": 1176,
+                "user_id": 3,
+                "user_name": "linaspurinis",
+                "name": "Latest Certified Fresh Releases",
+                "slug": "latest-certified-fresh-releases",
+                "description": "Score >= 60\r\nLimit 30",
+                "mediatype": "movie",
+                "items": 30,
+                "likes": 21,
+                "dynamic": true,
+                "private": false
+            }
+        ]
+        """
+        url = self.get_list_by_id_url.format(list_id=list_id)
+        response = requests.get(url)
+        list_info = response.json()
+
+        if isinstance(list_info, dict):
+            error = list_info.get("error")
+            print(f"Error getting list {url} : {error}")
+            return None
+
+        if not isinstance(list_info, list):
+            print(f"Error getting list, it should a list! {url} : {list_info}")
+            return None
+
+        if len(list_info) > 0:  # return first list info
+            return list_info[0]
+
+        print(f"Error getting list! {list_info}")
+        return None
+
     def get_list_info_by_url(self, url):
         """
         Take an MDBList public URL and return list info.
@@ -271,6 +364,33 @@ class Mdblist:
         """
         url = url.replace("https://mdblist.com/lists/", "")
         parts = url.split("/")
+        if len(parts) != 2:
+            print(f"Error! URL {url} is not in the expected format.")
+            return None
         username = parts[0]
         listname = parts[1]
         return self.get_list_by_name(username, listname)
+
+    def get_my_limits(self):
+        """
+        Get My Limits
+        Returns the API usage limits and current usage.
+
+        GET https://api.mdblist.com/user?apikey=abc123
+        apikey: Your API key
+        Response
+        {
+            "api_requests": 100000,
+            "api_requests_count": 276,
+            "user_id": 3,
+            "patron_status": "active_patron",
+            "patreon_pledge": 300
+        }
+        """
+        url = f"https://api.mdblist.com/user?apikey={self.api_key}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error getting limits: {response.status_code}")
+            return None

@@ -1,16 +1,26 @@
-# Emby MDBList Collection Creator 1.82
+![](images/banner.jpeg)
+
+# Emby MDBList Collection Creator 1.83
 
 This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB.
+
+## Plugin version now available!
+
+If you prefer to make life easier you can use the [Plugin Version on ACdb.tv Automated Collections](https://acdb.tv/). Read more at the bottom of readme. If not, continue reading!
 
 ## Features
 
 * List Conversion: Transform MDBList lists into Emby collections
 * Metadata Refresh: Keep ratings up-to-date for newly released content
 * Collection Images: Upload local or remote images for collections posters
-* Seasonal Collections: Specify when a collections should be visible
-* Collection Ordering: Show your collections in order of which one was update
+* Seasonal Collections: Specify when a collection should be visible
+* Collection Ordering: Show your collections in order of which one was updated last
 * Collection Description: Add description from MDBList or create your own
 * Backup & Restore: Additional utilities to backup and restore watch history and favorites
+
+## Support me
+
+* Please consider [subscribing to my Patreon](https://www.patreon.com/c/acdbtv) even though you use this script and not ACdb.
 
 ## Prerequisites:
 
@@ -124,7 +134,7 @@ By creating your own lists on MDBList (found at [My MDBList](https://mdblist.com
 
 ## Sorting Shows and Movies by time added
 
-This feature is off by default. Emby can not (yet) sort items inside collections by time added to library. That means you can't sort collections to show what is newest first. This is a shame if you have a Trending Movies collection for example and you can't see what's new at a glance. 
+This feature is off by default. Emby can not sort items inside collections by time added to library. That means you can't sort collections to show what is newest first. This is a shame if you have a Trending Movies collection for example and you can't see what's new at a glance. 
 
 To address this you can have this script update the sort names of items that are in collections. It updates item sort name in the metadata so that the sort name is appended with "!!![number_of_minutes_until_year_2100_from_the_date_time_added_to_emby]". That way the newest items show first when sorted in the default alphabetical order. This will affect the sorting of these items elsewhere as well which you may or may not care about, you can always turn it off later and the old sort name will be restored on the next run of the script.
 
@@ -144,13 +154,16 @@ Specify the image to use as a collection poster, either a local image or an imag
 ## Backing up IsWatched and Favorites
 Kind of a bolted on functionality since it's unrelated to the main function of the script, but I needed it so I added it.
 
-### Backuping up
+### Backing up
 Run app_backup.py to save IsWatched and Favorites for all users to json files, the files will be saved to a "backup" directory. If you only want to use this functionality it's enough to fill out "emby_server_url", "emby_user_id" and "emby_api_key" in the config file.
 
 ### Restoring backup
 Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, see comments at top of app_restore_backup.py.
 
 ## Frequently Asked Questions
+
+- **Is there a plugin version available?**
+  - Yes, see [ACdb.tv Automated Collections](https://acdb.tv/). More information at the end of the readme.
 
 - **What happens if I rename my collection in Emby or this script?**
   - A new collection will be created with the name you specify in the config file and the renamed collection will be ignored by the script. 
@@ -167,7 +180,7 @@ Run app_restore_backup.py to restore IsWatched and Favorites to ANOTHER server, 
 ## Changelog
 
 ### Version 1.1
-Can use lists by specifing MDBList name and user name of creator instead of having to know the ID. No change required for config.cfg. See example config.cfg on how to use it.
+Can use lists by specifying MDBList name and user name of creator instead of having to know the ID. No change required for config.cfg. See example config.cfg on how to use it.
 
 ### Version 1.2
 Optionally change the sort name of Emby Collections so that the collections that get modified are ordered first. On by default. Optionally add "update_collection_sort_name = False" to config.cfg to disable.
@@ -179,7 +192,7 @@ Optionally set sort names of items so that the newest items show first in the co
 Optionally refresh metadata for newly added media. Added 2 scripts to backup IsWatched and Favorites for all users. 
 
 ### Version 1.5
-New preffered method of adding lists by using the mdblist URL instead of the older method of specifying the ID or list name + author. No config file update is required, old methods will still work. See config.cfg for more info.
+New preferred method of adding lists by using the mdblist URL instead of the older method of specifying the ID or list name + author. No config file update is required, old methods will still work. See config.cfg for more info.
 
 ### Version 1.6
 Added support for multiple MDBList urls for a single collection.
@@ -203,3 +216,43 @@ Can set custom sort name for a collection. Use "collection_sort_name" in config.
 Optionally set "use_mdblist_collection_description = True" to grab the descriptions from MDBList. Applies to all collections.
 Optionally set "description" for each collection to set your own custom description. Will overwrite MDBList description if set.
 See examples in config.cfg. 
+
+### Version 1.83
+* Now using newer version of MDBList API. 
+* Added some new MDBLIst methods which may be helpful in the future. 
+* Renamed some variables to avoid naming conflicts. 
+* Updated Readme to include information about ACdb.tv.
+
+
+
+# 🚀 Try the ACdb.tv Automated Collections Plugin for Emby!
+
+## Looking for an easier way to sync MDBList collections with Emby?
+Check out the [ACdb.tv Automated Collections plugin](https://acdb.tv/) — no Python or manual setup required! Install directly from the Emby plugin catalog and manage everything from ACdb.tv.
+
+![ACdb.tv collection repository](images/ACdb_Official_Collections.png)
+
+## Key Features:
+- Easily install the plugin from Emby Plugin Catalog
+- Easy webapp-based configuration at [acdb.tv](https://acdb.tv/) instead of fiddling with config files.
+- Dynamic movie & TV collections synced automatically
+- Scheduled/seasonal collections (show only during specific periods)
+- Custom collection ordering (move updated collections to the top)
+- Ability to see which items you have and do not have in a collection (Patreon feature)
+- Coming soon: Collection posters with a poster gallery
+
+## How to Get Started:
+![ACdb.tv Plugin install](images/ACdb_plugin_install.png)
+- Install from the Emby plugin catalog (see [Getting Started](https://acdb.tv/))
+- Free: 3 collections
+- $2/month: Up to 20 collections, any MDBList, full customization
+
+### Seasonal Collection in ACdb.tv
+![ACdb.tv seasonal collections](images/ACdb_seasonal_collections.png)
+
+### View which items you have to do not have from a collection
+![ACdb.tv see which items you have, and](images/ACdb_missing_items.png)
+
+### Modify collection sort order, schedule and more
+![ACdb.tv example of collection settings](images/ACdb_collection_settings.png)
+
