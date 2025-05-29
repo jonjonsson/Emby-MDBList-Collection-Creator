@@ -13,8 +13,20 @@ backup_filters = ["IsPlayed", "IsFavorite"]
 seconds_between_requests = 10
 
 config_parser = configparser.ConfigParser()
-if config_parser.read("config_hidden.cfg") == []:
-    config_parser.read("config.cfg")
+
+
+def read_config_file(parser, filename):
+    try:
+        with open(filename, encoding="utf-8") as f:
+            parser.read_file(f)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+if not read_config_file(config_parser, "config_hidden.cfg"):
+    read_config_file(config_parser, "config.cfg")
+
 emby_server_url = config_parser.get("admin", "emby_server_url")
 emby_user_id = config_parser.get("admin", "emby_user_id")
 emby_api_key = config_parser.get("admin", "emby_api_key")

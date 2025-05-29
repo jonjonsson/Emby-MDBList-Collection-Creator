@@ -42,73 +42,82 @@ class Mdblist:
                 mediatypes.append(item["mediatype"])
         return mediatypes
 
-    def get_list(self, list_id, filter_imdb_ids=True, append_to_response=[]):
+    def get_list(
+        self,
+        list_id,
+        filter_imdb_ids=True,
+        append_to_response=[],
+        limit=None,
+        offset=None,
+        max_items=None,  # <-- Added max_items parameter
+    ):
         """
         Retrieves a list of items from a specified list ID and optionally filters by IMDb IDs.
+        Supports pagination using limit and offset. By default, fetches all items.
 
         Args:
             list_id (str): The ID of the list to retrieve.
             filter_imdb_ids (bool, optional): If True, filters the list to only include IMDb IDs. Defaults to True.
             append_to_response (list, optional): Additional parameters to append to the response URL. Defaults to an empty list.
+            limit (int, optional): Number of items per request. Defaults to None (fetch all).
+            offset (int, optional): Offset for pagination. Defaults to None.
+            max_items (int, optional): Maximum number of items to retrieve. Defaults to None (fetch all).
 
         Returns:
-            tuple: A tuple containing:
-                - list or None: A list of IMDb IDs if filter_imdb_ids is True, otherwise the full list of items.
-                - str or None: The media type of the list items, or None if an error occurs.
+            tuple: (list of IMDb IDs or items, list of media types)
         """
-        url = self.items_url.format(list_id=list_id)
-        append_to_response = "%2C".join(append_to_response)
-        if append_to_response:
-            url = f"{url}&append_to_response={append_to_response}"
-        response = requests.get(url)
-        if response.text:
-            result = None
+        all_items = []
+        current_offset = offset if offset is not None else 0
+        page_limit = limit if limit is not None else 1000
+
+        while True:
+            url = self.items_url.format(list_id=list_id)
+            params = []
+            if append_to_response:
+                params.append(f"append_to_response={'%2C'.join(append_to_response)}")
+            params.append(f"limit={page_limit}")
+            params.append(f"offset={current_offset}")
+            if params:
+                url = f"{url}&{'&'.join(params)}"
+
+            response = requests.get(url)
+            if not response.text:
+                print(f"No response received from {url}")
+                return None, None
+
             try:
                 result = response.json()
-                """ 
-                # Example response
-                {
-                    "movies": [
-                        {
-                        "id": 917496,
-                        "rank": 1,
-                        "adult": 0,
-                        "title": "Beetlejuice Beetlejuice",
-                        "imdb_id": "tt2049403",
-                        "tvdb_id": null,
-                        "language": "en",
-                        "mediatype": "movie",
-                        "release_year": 2024,
-                        "spoken_language": "en"
-                        }
-                    ],
-                    "shows": []
-                    }
-                """
-                # To be compatible with old api and when using /json to get lists, I'm merging movies and shows into one list
-                result = result["movies"] + result["shows"]
+                items = result.get("movies", []) + result.get("shows", [])
             except Exception:
                 print(f"Error! Cannot decode json, make sure URL is valid: {url}")
                 return None, None
-            if filter_imdb_ids is False:
-                return result, self.check_list_mediatype(result)
 
-            imdb_ids = []
-            for item in result:
-                if "imdb_id" in item:
-                    imdb_id = item["imdb_id"]
-                    imdb_ids.append(imdb_id)
-                else:
-                    print(f"Warning: Could not find imdb_id in item {item}.")
+            all_items.extend(items)
 
-            if len(imdb_ids) == 0:
-                print(
-                    f"ERROR! Cannot find any items in list id {list_id} with api url {url} and public url https://mdblist.com/?list={list_id}."
-                )
-            return imdb_ids, self.check_list_mediatype(result)
-        else:
-            print(f"No response received from {url}")
-            return None, None
+            # If max_items is set and we've reached/exceeded it, break
+            if max_items is not None and len(all_items) >= max_items:
+                all_items = all_items[:max_items]
+                break
+
+            # Check if more pages are available
+            has_more = response.headers.get("X-Has-More", "false").lower() == "true"
+            if not has_more:
+                break
+            current_offset += page_limit
+
+        if filter_imdb_ids is False:
+            return all_items, self.check_list_mediatype(all_items)
+
+        imdb_ids = []
+        for item in all_items:
+            if "imdb_id" in item:
+                imdb_ids.append(item["imdb_id"])
+            else:
+                print(f"Warning: Could not find imdb_id in item {item}.")
+
+        if len(imdb_ids) == 0:
+            print(f"ERROR! Cannot find any items in list id {list_id}.")
+        return imdb_ids, self.check_list_mediatype(all_items)
 
     def get_list_using_url(self, url):
         # Just append /json to end of url to get the json version of the list
@@ -136,6 +145,35 @@ class Mdblist:
                     f"ERROR! Cannot find any items in list with api url {url} and public url {url.replace('/json','')}."
                 )
             return imdb_ids, self.check_list_mediatype(lst)
+        else:
+            print(f"No response received from {url}")
+            return None, None
+
+    def get_list_items_using_url(self, url):
+        # Just append /json to end of url to get the json version of the list
+        # Check first if json is already in the url
+        # Used for external lists.
+        # TODO There is a better way since External lists support was added to api
+        if url.endswith("/json"):
+            url = url[:-5]
+
+        # Make sure that url does not end with /
+        if url.endswith("/"):
+            url = url[:-1]
+        url = url + "/json"
+        response = requests.get(url)
+        if response.text:
+            list = response.json()
+            """
+            It returns like this if empty, we need to handle it
+            0 = {'error': 'empty or private list'}
+            len() = 1
+            """
+            if len(list) == 1 and "error" in list[0]:
+                print(f"Error! {list[0]['error']}")
+                return None, None
+
+            return list, self.check_list_mediatype(list)
         else:
             print(f"No response received from {url}")
             return None, None

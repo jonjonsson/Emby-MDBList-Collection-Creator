@@ -1,6 +1,6 @@
 ![](images/banner.jpeg)
 
-# Emby MDBList Collection Creator 1.83
+# Emby MDBList Collection Creator 1.84
 
 This tool allows you to convert lists from MDBList.com into collections within your Emby media server. MDBList aggregates content lists from various platforms including Trakt and IMDB.
 
@@ -223,6 +223,8 @@ See examples in config.cfg.
 * Renamed some variables to avoid naming conflicts. 
 * Updated Readme to include information about ACdb.tv.
 
+### Version 1.84
+Important update if you have lists with more than 1000 items. Addressing changes to MDBList API that now limits items requests to 1000 at a time.
 
 
 # 🚀 Try the ACdb.tv Automated Collections Plugin for Emby!
