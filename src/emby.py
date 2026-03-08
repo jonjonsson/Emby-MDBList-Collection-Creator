@@ -3,6 +3,7 @@ import time
 import requests
 import base64
 from urllib.parse import quote
+from datetime import datetime
 
 ## Helpful URLS for dev:
 # https://swagger.emby.media/?staticview=true#/
@@ -414,20 +415,46 @@ class Emby:
 
         return all_items
 
-    def set_item_as_played(self, user_id, item_id):
+    def set_item_as_played(self, user_id, item_id, date_played=None):
         """
         Set an item as played for a specific user.
 
         Args:
             user_id (str): The ID of the user.
             item_id (str): The ID of the item to mark as played.
+            date_played (str, optional): The date and time the item was played.
 
         Returns:
             bool: True if the item was marked as played successfully, False otherwise.
         """
+
         endpoint = f"/emby/Users/{user_id}/PlayedItems/{item_id}"
         url = self.server_url + endpoint
-        response = requests.post(url, headers=self.headers)
+
+        params = {}
+        if date_played:
+            # Convert to yyyyMMddHHmmss format as required by Emby API
+            dt = None
+            try:
+                # Try parsing ISO 8601 with or without milliseconds and Z
+                if date_played.endswith("Z"):
+                    date_played_clean = date_played.replace("Z", "+00:00")
+                    dt = datetime.fromisoformat(date_played_clean)
+                else:
+                    dt = datetime.fromisoformat(date_played)
+            except Exception:
+                # Try parsing as yyyy-MM-dd HH:mm:ss or fallback
+                try:
+                    dt = datetime.strptime(date_played, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    print(f"Could not parse date_played: {date_played}")
+            if dt:
+                date_played_fixed = dt.strftime("%Y%m%d%H%M%S")
+                params["DatePlayed"] = date_played_fixed
+            else:
+                params["DatePlayed"] = date_played
+
+        response = requests.post(url, headers=self.headers, params=params)
         if response.status_code == 200:
             return True
         else:

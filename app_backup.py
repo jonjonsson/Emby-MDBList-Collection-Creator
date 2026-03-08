@@ -7,6 +7,7 @@ import configparser
 import json
 from src.emby import Emby
 import os
+import datetime
 
 directory = "backup"
 backup_filters = ["IsPlayed", "IsFavorite"]
@@ -36,10 +37,16 @@ emby.seconds_between_requests = seconds_between_requests
 
 def get_all_items(user_id, filter):
 
+    fields = ["ProviderIds"]
+    include_item_types = ["Movie", "Series", "Episode"]
+    if filter == "IsPlayed":
+        fields.append("UserDataLastPlayedDate")
+        include_item_types = ["Movie", "Episode"]
+
     items = emby.get_items(
         params={"userId": user_id},
-        fields=["ProviderIds"],
-        include_item_types=["Movie", "Series", "Episode"],
+        fields=fields,
+        include_item_types=include_item_types,
         filters=[filter],
     )
 
@@ -51,17 +58,19 @@ def get_all_items(user_id, filter):
             "ProviderIds",
             "Type",
         ]
-        # remove any fields that are not in include_fields
-        item = {key: item[key] for key in include_fields if key in item}
-        # remove any item["ProviderIds"] that are not relevant
+        item_data = {key: item[key] for key in include_fields if key in item}
         include_provider_ids = ["imdb", "tmdb", "tvdb"]
-        if "ProviderIds" in item:
-            item["ProviderIds"] = {
+        if "ProviderIds" in item_data:
+            item_data["ProviderIds"] = {
                 key: value
-                for key, value in item["ProviderIds"].items()
+                for key, value in item_data["ProviderIds"].items()
                 if key.lower() in include_provider_ids
             }
-        returned_items.append(item)
+
+        if "UserData" in item and "LastPlayedDate" in item["UserData"]:
+            item_data["LastPlayedDate"] = item["UserData"]["LastPlayedDate"]
+
+        returned_items.append(item_data)
 
     return returned_items
 
@@ -79,6 +88,7 @@ def main():
 
     print(f"\nBacking up Watch history and Favorites for {len(all_users)} users\n")
 
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     for filter in backup_filters:
         for user in all_users:
             user_id = user["Id"]
@@ -91,7 +101,7 @@ def main():
             }
             print(f"\nGetting {filter} items for {user_name}")
             data["Items"] = get_all_items(user_id, filter)
-            file_name = f"{directory}/{filter}_{user_name}.json"
+            file_name = f"{directory}/{now_str}_{filter}_{user_name}.json"
             print(f"\nWriting {len(data['Items'])} items to {file_name}")
             with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)

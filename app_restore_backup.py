@@ -11,8 +11,8 @@ Execute the script from the command line with the required arguments:
 --api_key: The API key for accessing the Emby server.
 --source_file: The path to the backup file.
 You can use this if you don't have access to the Emby database but you do have access to the API.
-Example command: 
-    
+Example command:
+
     python3 app_restore_backup.py -host http://xxx.xxx.xxx.xxx:xxxx -user_id abc123 -api_key abc123 -source_file "backup\IsPlayed_SomeUsername.json"
 
 Json file exmple:
@@ -55,6 +55,14 @@ def add_error(error):
 def main(args):
     emby = Emby(args.host, args.user_id, args.api_key)
     emby.seconds_between_requests = 0.1
+
+    emby_info = emby.get_system_info()
+    if emby_info is False:
+        print("Error connecting to Emby, check your host and API key.")
+        sys.exit(1)
+
+    print(f"Connected to Emby server: {emby_info['ServerName']}")
+
     backup_file = args.source_file
 
     with open(backup_file, "r") as file:
@@ -116,9 +124,19 @@ def main(args):
             )
             continue
 
+        # Ensure new_item_ids is a list before iterating
+        if not isinstance(new_item_ids, list):
+            add_error(
+                f"Unexpected result type for new_item_ids: {type(new_item_ids)} for {item_name}"
+            )
+            continue
+
         for new_item_id in new_item_ids:
             if filter == "IsPlayed":
-                set_as_played = emby.set_item_as_played(user_id, new_item_id)
+                last_played_date = item.get("LastPlayedDate")
+                set_as_played = emby.set_item_as_played(
+                    user_id, new_item_id, date_played=last_played_date
+                )
                 if not set_as_played:
                     add_error(f"Cannot set to IsPlayed {new_item_id}: {item_name}")
             elif filter == "IsFavorite":
